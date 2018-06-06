@@ -6,12 +6,12 @@
 #include "obd.hpp"
 
 
-void Stack::push(Tree::Node* node)
+void Stack::push(Tree::Node* ptrNode)
 {
-	arr[size++] = node;
+    arr[size++] = ptrNode;
 }
 
 Tree::Node* Stack::pop()
 {
-	return arr[--size];
+    return arr[--size];
 }

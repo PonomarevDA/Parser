@@ -11,10 +11,14 @@
 * @param value - значение узла
 * @note ≈сли пам€ти не хватает - игнорируем
 */
-void Tree::add_node_lower(uint8_t value)
+Tree::Node* Tree::add_node_lower(uint8_t value)
 {
     if (Size < MaxSize)
-        ArrOfNodes[Size++].Value = value;
+    {
+        ArrOfNodes[Size].Value = value;
+        return &ArrOfNodes[Size++];
+    }
+    return nullptr;
 }
 
 
@@ -22,32 +26,23 @@ void Tree::add_node_lower(uint8_t value)
 * @brief ƒобавить узел "родитель", т.е. у которого есть дети
 * @param value - значение узла
 * @param value - значение узла
-* @note ≈сли пам€ти не хватает - игнорируем
+* @return указатель на узел, иначе nullptr
 */
-void Tree::add_node_parent(uint8_t value, Node** childsArr, uint8_t childsCount)
+Tree::Node* Tree::add_node_parent(uint8_t value, Node** childsArr, uint8_t childsCount)
 {
     if (Size < MaxSize)
     {
         ArrOfNodes[Size].Value = value;
         ArrOfNodes[Size].ChildsArr = childsArr;
-        ArrOfNodes[Size++].ChildsCount = childsCount;
+        ArrOfNodes[Size].ChildsCount = childsCount;
+        while(childsCount-- != 0)
+            (*(childsArr)++)->Parent = &ArrOfNodes[Size];
+
+        return &ArrOfNodes[Size++];
     }
+    return nullptr;
 }
 
-
-/*
-* @brief ѕолучить значение узла
-*/
-/*
-uint8_t Tree::get_value_of_node(Node* ptrNode)
-{
-    return ArrOfNodes[numberOfNode].get_value();
-}
-int8_t Tree::get_parent_of_node(uint64_t node)
-{
-    return ArrOfNodes[node].get_parent();
-}
-*/
 
 /*
 * @brief ѕолучить размер дерева (кол-во узлов)
@@ -66,3 +61,13 @@ uint8_t Tree::get_max_size()
     return MaxSize;
 }
 
+
+Tree::Node* Tree::get_base_node()
+{
+    Tree::Node* node = &ArrOfNodes[0];
+    while(node->Parent != nullptr)
+    {
+        node = node->Parent;
+    }
+    return node;
+}

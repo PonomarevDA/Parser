@@ -18,13 +18,18 @@ enum optcode_t
 
 struct ParamTable_t
 {
+    ParamTable_t(): flength(0), tree(32) {}
     uint8_t flength;
-    uint8_t Formula[32];
-    Tree TreeParam();
+    uint8_t formula[32];
+    Tree tree;
 };
 
-
-void Do();
+void Show_operator(Tree::Node*);
+void Show_tree();
+void Show_byte(uint8_t byte);
 void Show_formula();
+void Parser();
+void Do();
+
 
 #endif // OBD

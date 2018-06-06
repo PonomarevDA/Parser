@@ -20,16 +20,19 @@ public:
         Node* Parent;
     };
 
-    Tree() : Size(0), MaxSize(10) { ArrOfNodes = new Node[10]; }
-    Tree(uint8_t maxSize) : Size(0), MaxSize(maxSize) { ArrOfNodes = new Node[MaxSize]; }
+    //Tree() : Size(0), MaxSize(10) { ArrOfNodes = new Node[33]; }
+    //Tree(uint8_t maxSize) : Size(0), MaxSize(maxSize) { ArrOfNodes = new Node[MaxSize]; }
+    Tree() : Size(0), MaxSize(10) {}
+    Tree(uint8_t maxSize) : Size(0), MaxSize(maxSize) {}
 
-    void add_node_lower(uint8_t);
-    void add_node_parent(uint8_t, Node**, uint8_t);
+    Node* add_node_lower(uint8_t);
+    Node* add_node_parent(uint8_t, Node**, uint8_t);
+    Node* get_base_node();
 
     uint8_t get_size();
     uint8_t get_max_size();
 private:
-    Node* ArrOfNodes;
+    Node ArrOfNodes[32];
     uint8_t Size;
     uint8_t MaxSize;
 };
