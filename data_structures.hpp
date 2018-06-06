@@ -1,7 +1,6 @@
 #ifndef DATASTRUCTURES
 #define DATASTRUCTURES
 
-#include "obd.hpp"
 
 /*
 * @brief Дерево динамического размера, узлы которого пронумерованы
