@@ -1,6 +1,9 @@
 #ifndef DATASTRUCTURES
 #define DATASTRUCTURES
 
+typedef unsigned char uint8_t;
+typedef signed char int8_t;
+typedef unsigned int uint32_t;
 
 /*
 * @brief Дерево динамического размера, узлы которого пронумерованы

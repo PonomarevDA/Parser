@@ -1,7 +1,6 @@
 /*
 * @File Файл с реализацией методов класса Tree
 */
-#include "stdafx.h"
 #include "data_structures.hpp"
 #include "obd.hpp"
 #include <cstring>
