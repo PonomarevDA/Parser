@@ -5,15 +5,15 @@
 #include "obd.hpp"
 
 
-void Stack::push(Tree::Node* ptrNode)
+void Stack::Push(Tree::Node* ptrNode)
 {
 	if(Size < MaxSize)
-		arr[Size++] = ptrNode;
+		Arr[Size++] = ptrNode;
 }
 
-Tree::Node* Stack::pop()
+Tree::Node* Stack::Pop()
 {
 	if(Size != 0)
-		return arr[--Size];
+		return Arr[--Size];
 	return nullptr;
 }

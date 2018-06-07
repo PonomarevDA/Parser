@@ -136,18 +136,18 @@ void Parser()
         // Если операнд
         if( (byte < 0x08) || (byte >= 0x80) )
         {
-            Tree::Node* op = ParamTable[paramNumber].tree.add_node_lower(byte);
-            buf.push(op);
+            Tree::Node* op = ParamTable[paramNumber].tree.Add_node_lower(byte);
+            buf.Push(op);
         }
         // Если оператор
         else
         {
             uint8_t length = 2;
             Tree::Node** ops = new Tree::Node*[length];
-            ops[0] = buf.pop();
-            ops[1] = buf.pop();
-            Tree::Node* op = ParamTable[paramNumber].tree.add_node_parent(byte, ops, length);
-            buf.push(op);
+            ops[0] = buf.Pop();
+            ops[1] = buf.Pop();
+            Tree::Node* op = ParamTable[paramNumber].tree.Add_node_parent(byte, ops, length);
+            buf.Push(op);
         }
     }
 }
@@ -278,7 +278,7 @@ void Show_byte(uint8_t byte)
 void Show_tree()
 {
     const uint8_t paramNumber = 0;
-    Tree::Node* ptrNode = ParamTable[paramNumber].tree.get_base_node();
+    Tree::Node* ptrNode = ParamTable[paramNumber].tree.Get_base_node();
     std::cout << std::endl << "Tree:" << std::endl;
     if (ptrNode != nullptr)
     {

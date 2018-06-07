@@ -1,12 +1,12 @@
-#ifndef DATASTRUCTURES
-#define DATASTRUCTURES
+#ifndef __DATASTRUCTURES
+#define __DATASTRUCTURES
 
 typedef unsigned char uint8_t;
 typedef signed char int8_t;
 typedef unsigned int uint32_t;
 
 /*
-* @brief Дерево динамического размера, узлы которого пронумерованы
+* @brief Дерево постоянного указанного заранее размера
 */
 class Tree
 {
@@ -26,17 +26,17 @@ public:
     Tree() : Size(0), MaxSize(10) {}						// конструктор без аргументов - размер 10
     Tree(uint8_t maxSize) : Size(0), MaxSize(maxSize) {}	// конструктор с аргументом - размером дерева
 
-    Node* add_node_lower(uint8_t);							// добавить операнд (узел не имеет потомков)
-    Node* add_node_parent(uint8_t, Node**, uint8_t);		// добавить оператор (аргументы: байт вместе с потомками)
-    Node* get_base_node();									// получить указатель на самый верхний узел
+    Node* Add_node_lower(uint8_t);							// добавить операнд (узел не имеет потомков)
+    Node* Add_node_parent(uint8_t, Node**, uint8_t);		// добавить оператор (аргументы: байт вместе с потомками)
+    Node* Get_base_node();									// получить указатель на самый верхний узел
+	void Do_reverse_calculate(uint32_t value);
 
-    uint8_t get_size();
-    uint8_t get_max_size();
+    uint8_t Get_size();
+    uint8_t Get_max_size();
 private:
 	uint8_t Size;
 	const uint8_t MaxSize;
     Node ArrOfNodes[32];
-    
 };
 
 
@@ -47,13 +47,13 @@ class Stack
 {
 public:
     Stack() : Size(0), MaxSize(32) {}
-    void push(Tree::Node*);
-    Tree::Node* pop();
+    void Push(Tree::Node*);
+    Tree::Node* Pop();
 private:
 	const uint8_t MaxSize;
 	uint8_t Size;
-    Tree::Node* arr[32];
+    Tree::Node* Arr[32];
     
 };
 
-#endif // DATASTRUCTURES
+#endif // __DATASTRUCTURES

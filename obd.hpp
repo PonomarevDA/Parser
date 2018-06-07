@@ -1,5 +1,5 @@
-#ifndef OBD
-#define OBD
+#ifndef __OBD
+#define __OBD
 
 #include "data_structures.hpp"
 
@@ -62,4 +62,4 @@ void Init();
 void Do();
 
 
-#endif // OBD
+#endif // __OBD

@@ -10,7 +10,7 @@
 * @param value - значение узла
 * @note Если памяти не хватает - игнорируем
 */
-Tree::Node* Tree::add_node_lower(uint8_t value)
+Tree::Node* Tree::Add_node_lower(uint8_t value)
 {
     if (Size < MaxSize)
     {
@@ -27,7 +27,7 @@ Tree::Node* Tree::add_node_lower(uint8_t value)
 * @param value - значение узла
 * @return указатель на узел, иначе nullptr
 */
-Tree::Node* Tree::add_node_parent(uint8_t value, Node** childsArr, uint8_t childsCount)
+Tree::Node* Tree::Add_node_parent(uint8_t value, Node** childsArr, uint8_t childsCount)
 {
     if (Size < MaxSize)
     {
@@ -46,7 +46,7 @@ Tree::Node* Tree::add_node_parent(uint8_t value, Node** childsArr, uint8_t child
 /*
 * @brief Получить размер дерева (кол-во узлов)
 */
-uint8_t Tree::get_size()
+uint8_t Tree::Get_size()
 {
     return Size;
 }
@@ -55,13 +55,13 @@ uint8_t Tree::get_size()
 /*
 * @brief Получить размер дерева (кол-во узлов)
 */
-uint8_t Tree::get_max_size()
+uint8_t Tree::Get_max_size()
 {
     return MaxSize;
 }
 
 
-Tree::Node* Tree::get_base_node()
+Tree::Node* Tree::Get_base_node()
 {
     Tree::Node* node = &ArrOfNodes[0];
 	if (node == nullptr)
