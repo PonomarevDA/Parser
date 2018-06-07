@@ -49,17 +49,22 @@ struct ParamTable_t
     Tree tree;
 };
 
-void method_dichotomy(int64_t NeedValue);
-void brute_force(int64_t NeedValue);
-void Test_calculation();
-uint32_t Calculate(uint8_t opcode, uint32_t operand1, uint32_t operand2 = 0, uint32_t operand3 = 0);
-void Show_operator(Tree::Node*);
-void Show_tree();
-void Show_byte(uint8_t byte);
-void Show_formula();
-void Parser();
-void Init();
-void Do();
+// Методы инициализации:
+void Init();						// Инициализация протокола: построение дерева
+void Create_tree();					// Построить дерево синтаксического разбора
 
+// Методы выполнения алгоритма прямого/обратного расчета:
+void Do_direct_calculate();
+uint8_t Do_reverse_calculate_with_tree(uint32_t value, Tree::Node* node = nullptr);
+uint8_t Do_reverse_calculate_with_method_dichotomy(int64_t NeedValue);
+uint8_t Do_reverse_calculate_with_brute_force(int64_t NeedValue);
+uint32_t Calculate(uint8_t opcode, uint32_t operand1, uint32_t operand2 = 0, uint32_t operand3 = 0);
+void Test_calculations();
+
+// Методы иллюстрации результатов алгоритмов в терминале:
+void Show_formula();
+void Show_byte(uint8_t byte);
+void Show_tree();
+void Show_tree_node(Tree::Node*);
 
 #endif // __OBD

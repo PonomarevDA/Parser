@@ -2,12 +2,17 @@
 #include "cstring"  // для memcpy
 #include <iostream>
 
+
+// Global and static variables:
 static Stack buf;
 static ParamTable_t ParamTable[1];
 static uint8_t ParamCount = 1;
 static Frame frame;
 static uint32_t Value = 0;
 
+/*
+* @brief Имитация инициализации тестового стенда
+*/
 void Init()
 {
     
@@ -22,10 +27,45 @@ void Init()
 	ParamTable[0].FormulaLength = 12;
 	uint8_t arr[12] = { 0x01, 0x1A, 0x0D, 0x0D, 0x16, 0x02, 0x90, 0x16, 0x01, 0x88, 0x00, 0x8A};
 	memcpy(ParamTable[paramNumber].Formula, arr, ParamTable[paramNumber].FormulaLength);
-    Parser();
+    Create_tree();
 }
 
-void Do()
+
+/*
+* @brief Построение дерева синтаксического разбора формулы
+*/
+void Create_tree()
+{
+	const uint8_t paramNumber = 0;
+
+	for (uint8_t count = ParamTable[paramNumber].FormulaLength; count >= 1;)
+	{
+		uint8_t byte = ParamTable[paramNumber].Formula[--count];
+		// Если операнд
+		if ((byte < 0x08) || (byte >= 0x80))
+		{
+			Tree::Node* op = ParamTable[paramNumber].tree.Add_node_lower(byte);
+			buf.Push(op);
+		}
+		// Если оператор
+		else
+		{
+			uint8_t length = 2;
+			Tree::Node** ops = new Tree::Node*[length];
+			ops[0] = buf.Pop();
+			ops[1] = buf.Pop();
+			Tree::Node* op = ParamTable[paramNumber].tree.Add_node_parent(byte, ops, length);
+			buf.Push(op);
+		}
+	}
+}
+
+
+/*
+* @brief Выполнение прямого расчета по формуле
+* @note Скопировано из тестового стенда
+*/
+void Do_direct_calculate()
 {
 	uint8_t param = 0;
 	uint8_t operators[16];
@@ -90,6 +130,124 @@ void Do()
 }
 
 
+/*
+* @brief Выполнить попытку обратного расчета с помощью дерева
+* @param value - число, которое должен распарсить терминал
+* @return valid - статус выполнения: 1 - все хорошо, 0 - ошибка
+*/
+uint8_t Do_reverse_calculate_with_tree(uint32_t value, Tree::Node* node)
+{
+	Tree::Node* base = ParamTable->tree.Get_base_node();
+	// Если текущий узел - операнд
+	if (node->ChildsCount == 0)
+	{
+		// ...
+	}
+	// Если текущий узел - унарный оператор
+	if (node->ChildsCount == 1)
+	{
+		uint8_t childByte = base->ChildsArr[0]->Value;
+
+		if ((childByte > 0x08) && (childByte < 0x80))
+		{
+			// ...
+		}
+		// Если операнд
+		else
+		{
+
+		}
+	}
+	// Если текущий узел - бинарный оператор
+	if (node->ChildsCount == 2)
+	{
+
+	}
+	// Если текущий узел - тернарный оператор
+	if (node->ChildsCount == 3)
+	{
+
+	}
+	return 1;
+}
+
+
+/*
+* @brief Обратный расчет с помощью метода перебора
+* @note Может выполняться очень долго (до получаса при 4 байтах)
+* @param NeedValue - число, которое должен распарсить терминал
+* @return статус выполнения: 1 - все хорошо, 0 - ошибка
+*/
+uint8_t Do_reverse_calculate_with_brute_force(int64_t NeedValue)
+{
+	for (uint16_t d0 = 0; d0 < 256; d0++)
+	{
+		for (uint16_t d1 = 0; d1 < 256; d1++)
+		{
+			for (uint16_t d2 = 0; d2 < 256; d2++)
+			{
+				frame.Data[0] = (uint8_t)d0; frame.Data[1] = (uint8_t)d1; frame.Data[2] = (uint8_t)d2;
+				Do_direct_calculate();
+				if (Value == NeedValue)
+				{
+					return 1;
+				}
+			}
+		}
+	}
+	return 0;
+}
+
+
+/*
+* @brief Обратный расчет с помощью метода дихотомии
+* @note Может не сойтись и зависнуть, однако относительно быстрый
+* @param NeedValue - число, которое должен распарсить терминал
+* @return статус выполнения: 1 - все хорошо, 0 - ошибка
+*/
+uint8_t Do_reverse_calculate_with_method_dichotomy(int64_t NeedValue)
+{
+	uint32_t dataMinBorder = 0;
+	uint32_t dataMaxBorder = 16777215;
+	uint32_t dataGuess = 8388608;
+	frame.Data[0] = dataGuess % 256;
+	frame.Data[1] = (dataGuess >> 8) % 256;
+	frame.Data[2] = (dataGuess >> 16) % 256;
+	Do_direct_calculate();
+	uint32_t LastValue = Value;
+	while (Value != NeedValue)
+	{
+		int64_t dif = Value - NeedValue;
+		// Если нужное число слева
+		if (dif > 0)
+		{
+			dataMaxBorder = dataGuess;
+			dataGuess = (dataMaxBorder + dataMinBorder) >> 1;	// округляем в меньшую сторону
+		}
+		else
+		{
+			dataMinBorder = dataGuess;
+			dataGuess = ((dataMaxBorder + dataMinBorder) >> 1) + 1;	// округляем в большую сторону
+		}
+		frame.Data[0] = dataGuess % 256;
+		frame.Data[1] = (dataGuess >> 8) % 256;
+		frame.Data[2] = (dataGuess >> 16) % 256;
+		LastValue = Value;
+		Do_direct_calculate();
+	}
+	return 1;
+}
+
+
+/*
+* @brief Расчет выражения
+* @note Скопировано из тестового стенда
+* @param opcode - оператор
+* @param operand1 - первый оператор
+* @param operand2 - второй оператор, если есть
+* @param operand3 - второй оператор, если есть
+* @return - результат расчета выражения
+*/
 uint32_t Calculate(uint8_t opcode, uint32_t operand1, uint32_t operand2, uint32_t operand3)
 {
 	if (opcode == OPCODE_LOG_OR)			return operand1 || operand2;
@@ -122,94 +280,15 @@ uint32_t Calculate(uint8_t opcode, uint32_t operand1, uint32_t operand2, uint32_
 			return 0xFFFFFFFF;
 		}
 	}
-
 	return 0;
 }
 
-void Parser()
-{
-    const uint8_t paramNumber = 0;
 
-    for(uint8_t count = ParamTable[paramNumber].FormulaLength; count >= 1;)
-    {
-        uint8_t byte = ParamTable[paramNumber].Formula[--count];
-        // Если операнд
-        if( (byte < 0x08) || (byte >= 0x80) )
-        {
-            Tree::Node* op = ParamTable[paramNumber].tree.Add_node_lower(byte);
-            buf.Push(op);
-        }
-        // Если оператор
-        else
-        {
-            uint8_t length = 2;
-            Tree::Node** ops = new Tree::Node*[length];
-            ops[0] = buf.Pop();
-            ops[1] = buf.Pop();
-            Tree::Node* op = ParamTable[paramNumber].tree.Add_node_parent(byte, ops, length);
-            buf.Push(op);
-        }
-    }
-}
-
-void brute_force(int64_t NeedValue)
-{
-	uint8_t valid = 0;
-	for (uint16_t d0 = 0; d0 < 256; d0++)
-	{
-		for (uint16_t d1 = 0; d1 < 256; d1++)
-		{
-			for (uint16_t d2 = 0; d2 < 256; d2++)
-			{
-				frame.Data[0] = (uint8_t)d0; frame.Data[1] = (uint8_t)d1; frame.Data[2] = (uint8_t)d2;
-				Do();
-				if (Value == NeedValue)
-				{
-					valid = 1;
-					break;
-				}
-			}
-			if (valid == 1)
-				break;
-		}
-		if (valid == 1)
-			break;
-	}
-}
-
-void method_dichotomy(int64_t NeedValue)
-{
-	uint32_t dataMinBorder = 0;
-	uint32_t dataMaxBorder = 16777215;
-	uint32_t dataGuess = 8388608;
-	frame.Data[0] = dataGuess % 256;
-	frame.Data[1] = (dataGuess >> 8) % 256;
-	frame.Data[2] = (dataGuess >> 16) % 256;
-	Do();
-	uint32_t LastValue = Value;
-	while (Value != NeedValue)
-	{
-		int64_t dif = Value - NeedValue;
-		// Если нужное число слева
-		if (dif > 0)
-		{
-			dataMaxBorder = dataGuess;
-			dataGuess = (dataMaxBorder + dataMinBorder) >> 1;	// округляем в меньшую сторону
-		}
-		else
-		{
-			dataMinBorder = dataGuess;
-			dataGuess = ((dataMaxBorder + dataMinBorder) >> 1) + 1;	// округляем в большую сторону
-		}
-		frame.Data[0] = dataGuess % 256;
-		frame.Data[1] = (dataGuess >> 8) % 256;
-		frame.Data[2] = (dataGuess >> 16) % 256;
-		LastValue = Value;
-		Do();
-	}
-}
-
-void Test_calculation()
+/*
+* @brief Тестовый кейс. Выполняет прямое и обратные решения задачи
+* @return Результаты выводит в терминал
+*/
+void Test_calculations()
 {
 	std::cout << "Direct calculation:\n";
 	frame.Data[0] = 9; frame.Data[1] = 3; frame.Data[2] = 0; Value = 0;
@@ -218,17 +297,17 @@ void Test_calculation()
 	{
 		std::cout << frame.Data[count] + 0 << " ";
 	}
-	Do();
+	Do_direct_calculate();
 	std::cout << "\nValue: " << Value << "\n";
 
 
 
 	std::cout << "\nInverse calculation:";
-	int64_t NeedValue = 167772150;
+	int64_t NeedValue = 167772140;
 	std::cout << "\nValue: " << NeedValue << "\n";
 	std::cout << "Frame: ";
-	brute_force(NeedValue);
-	//method_dichotomy(NeedValue);
+	Do_reverse_calculate_with_brute_force(NeedValue);
+	//Do_reverse_calculate_with_method_dichotomy(NeedValue);
 	for (uint8_t count = 0; count < 8; count++)
 	{
 		std::cout << frame.Data[count] + 0 << " ";
@@ -236,6 +315,10 @@ void Test_calculation()
 
 }
 
+
+/*
+* @brief Выводит в терминал формулу, полученную из конфигуратора
+*/
 void Show_formula()
 {
     const uint8_t paramNumber = 0;
@@ -249,6 +332,10 @@ void Show_formula()
     }
 }
 
+
+/*
+* @brief Выводит в терминал распарсенный байт формулы
+*/
 void Show_byte(uint8_t byte)
 {
     if(byte < 0x08)
@@ -275,6 +362,10 @@ void Show_byte(uint8_t byte)
         std::cout << "? ";
 }
 
+
+/*
+* @brief Выводит в терминал операторы дерева, начиная с верхнего узла, если возможно
+*/
 void Show_tree()
 {
     const uint8_t paramNumber = 0;
@@ -282,24 +373,27 @@ void Show_tree()
     std::cout << std::endl << "Tree:" << std::endl;
     if (ptrNode != nullptr)
     {
-        Show_operator(ptrNode);
+		Show_tree_node(ptrNode);
     }
     else
         std::cout <<std::endl << "Tree is empty";
 }
 
 
-void Show_operator(Tree::Node* ptrNode)
+/*
+* @brief Рекурсивно выводит в терминал операторы дерева
+*/
+void Show_tree_node(Tree::Node* ptrNode)
 {
-    if (ptrNode != nullptr)
-    {
-        if ( (ptrNode->Value >= 0x08) && (ptrNode->Value < 0x80) )
-        {
-            Show_byte(ptrNode->Value);
-            Show_operator(ptrNode->ChildsArr[0]);
-            Show_operator(ptrNode->ChildsArr[1]);
-        }
-        else
-            std::cout << std::endl;
-    }
+	if (ptrNode != nullptr)
+	{
+		if ((ptrNode->Value >= 0x08) && (ptrNode->Value < 0x80))
+		{
+			Show_byte(ptrNode->Value);
+			Show_tree_node(ptrNode->ChildsArr[0]);
+			Show_tree_node(ptrNode->ChildsArr[1]);
+		}
+		else
+			std::cout << std::endl;
+	}
 }

@@ -44,7 +44,8 @@ Tree::Node* Tree::Add_node_parent(uint8_t value, Node** childsArr, uint8_t child
 
 
 /*
-* @brief Получить размер дерева (кол-во узлов)
+* @brief Получить текущий размер дерева (текущее кол-во узлов)
+* @return текущий размер дерева
 */
 uint8_t Tree::Get_size()
 {
@@ -53,7 +54,8 @@ uint8_t Tree::Get_size()
 
 
 /*
-* @brief Получить размер дерева (кол-во узлов)
+* @brief Получить максимальный размер дерева (максимальное кол-во узлов)
+* @return максимальный размер дерева
 */
 uint8_t Tree::Get_max_size()
 {
@@ -61,6 +63,10 @@ uint8_t Tree::Get_max_size()
 }
 
 
+/*
+* @brief Получить указатель на самый верхний узел (родитель всех узлов)
+* @return указатель на самый верхний узел
+*/
 Tree::Node* Tree::Get_base_node()
 {
     Tree::Node* node = &ArrOfNodes[0];

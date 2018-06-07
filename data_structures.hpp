@@ -5,6 +5,8 @@ typedef unsigned char uint8_t;
 typedef signed char int8_t;
 typedef unsigned int uint32_t;
 
+//#include <obd.hpp>
+
 /*
 * @brief ƒерево посто€нного указанного заранее размера
 */
@@ -29,7 +31,6 @@ public:
     Node* Add_node_lower(uint8_t);							// добавить операнд (узел не имеет потомков)
     Node* Add_node_parent(uint8_t, Node**, uint8_t);		// добавить оператор (аргументы: байт вместе с потомками)
     Node* Get_base_node();									// получить указатель на самый верхний узел
-	void Do_reverse_calculate(uint32_t value);
 
     uint8_t Get_size();
     uint8_t Get_max_size();
