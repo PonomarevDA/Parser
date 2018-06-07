@@ -15,7 +15,6 @@ static uint32_t Value = 0;
 */
 void Init()
 {
-    
     const uint8_t paramNumber = 0;
 	/*
 	ParamTable[0].flength = 32;
@@ -50,12 +49,37 @@ void Create_tree()
 		// Если оператор
 		else
 		{
-			uint8_t length = 2;
-			Tree::Node** ops = new Tree::Node*[length];
-			ops[0] = buf.Pop();
-			ops[1] = buf.Pop();
-			Tree::Node* op = ParamTable[paramNumber].tree.Add_node_parent(byte, ops, length);
-			buf.Push(op);
+			// Если унарный оператор <=> 1 наследник
+			if ( (byte == OPCODE_LOG_OR) || (byte == OPCODE_LOG_OR) || (byte == OPCODE_LOG_NOT) || (byte == OPCODE_BIT_NOT) )
+			{
+				uint8_t length = 1;
+				Tree::Node** ops = new Tree::Node*[length];
+				ops[0] = buf.Pop();
+				Tree::Node* op = ParamTable[paramNumber].tree.Add_node_parent(byte, ops, length);
+				buf.Push(op);
+			}
+			// Если бинарный оператор <=> 2 наследника
+			else if ( (byte > OPCODE_BIT_OR) && (byte <= OPCODE_DIV))
+			{
+				uint8_t length = 2;
+				Tree::Node** ops = new Tree::Node*[length];
+				ops[0] = buf.Pop();
+				ops[1] = buf.Pop();
+				Tree::Node* op = ParamTable[paramNumber].tree.Add_node_parent(byte, ops, length);
+				buf.Push(op);
+			}
+			// Если тернарный оператор <=> 3 наследника
+			else if (byte == OPCODE_IF_ELSE)
+			{
+				uint8_t length = 3;
+				Tree::Node** ops = new Tree::Node*[length];
+				ops[0] = buf.Pop();
+				ops[1] = buf.Pop();
+				ops[2] = buf.Pop();
+				Tree::Node* op = ParamTable[paramNumber].tree.Add_node_parent(byte, ops, length);
+				buf.Push(op);
+			}
+			
 		}
 	}
 }
