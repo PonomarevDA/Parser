@@ -161,7 +161,7 @@ void brute_force(int64_t NeedValue)
 		{
 			for (uint16_t d2 = 0; d2 < 256; d2++)
 			{
-				frame.Data[0] = d0; frame.Data[1] = d1; frame.Data[2] = d2;
+				frame.Data[0] = (uint8_t)d0; frame.Data[1] = (uint8_t)d1; frame.Data[2] = (uint8_t)d2;
 				Do();
 				if (Value == NeedValue)
 				{

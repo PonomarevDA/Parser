@@ -42,17 +42,19 @@ private:
 
 
 /*
-* @brief Стек заранее заданного размера
+* @brief Стек заранее заданного размера - 32 байта
 */
 class Stack
 {
 public:
-    Stack() : size(0) {}
+    Stack() : Size(0), MaxSize(32) {}
     void push(Tree::Node*);
     Tree::Node* pop();
 private:
+	const uint8_t MaxSize;
+	uint8_t Size;
     Tree::Node* arr[32];
-    uint8_t size;
+    
 };
 
 #endif // DATASTRUCTURES

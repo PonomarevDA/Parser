@@ -7,10 +7,13 @@
 
 void Stack::push(Tree::Node* ptrNode)
 {
-    arr[size++] = ptrNode;
+	if(Size < MaxSize)
+		arr[Size++] = ptrNode;
 }
 
 Tree::Node* Stack::pop()
 {
-    return arr[--size];
+	if(Size != 0)
+		return arr[--Size];
+	return nullptr;
 }
