@@ -155,44 +155,73 @@ void Do_direct_calculate()
 
 
 /*
-* @brief Выполнить попытку обратного расчета с помощью дерева
-* @param value - число, которое должен распарсить терминал
-* @return valid - статус выполнения: 1 - все хорошо, 0 - ошибка
+* @brief Выполнить попытку рукурсивного обратного расчета с помощью дерева
+* @param value - результат выполнения прямого расчета указанного узла (оператора)
+* @return valid - статус выполнения
 */
 uint8_t Do_reverse_calculate_with_tree(uint32_t value, Tree::Node* node)
 {
+	enum: uint8_t
+	{
+		OK = 0,
+		FORMULA_ERROR_NODE_IS_OPERAND = 1,
+		BASE_IS_NULL = 2,
+		UNEXPECTED_ERROR = 255,
+	};
 	Tree::Node* base = ParamTable->tree.Get_base_node();
-	// Если текущий узел - операнд
+	
+	// 0. Check correcntness:
+	if (base == nullptr)
+		return BASE_IS_NULL;
+	if (node == nullptr)
+		node = base;
+
+	// +1. If this node is OPERAND <=> this node is apex (висячая вершина)
 	if (node->ChildsCount == 0)
 	{
-		// ...
+		// This node must be Base
+		if ((node == base) && (node->Value < 0x08))
+		{
+			frame.Data[node->Value] = value;
+		}
+		// Else, there is error in formula
+		else
+			return FORMULA_ERROR_NODE_IS_OPERAND;
 	}
-	// Если текущий узел - унарный оператор
-	if (node->ChildsCount == 1)
+	// -2. If this node is UNARY OPERATOR, try to calculate it
+	else if (node->ChildsCount == 1)
 	{
 		uint8_t childByte = base->ChildsArr[0]->Value;
 
+		// If child node is OPERAND, try to calculate it
 		if ((childByte > 0x08) && (childByte < 0x80))
 		{
-			// ...
+			/*TODO: reverse calculate*/
 		}
-		// Если операнд
+		// If child node is OPERATOR, try to recursively calculate it
 		else
 		{
-
+			uint8_t status = Do_reverse_calculate_with_tree(value, node->ChildsArr[0]);
+			if (status == UNEXPECTED_ERROR)
+				return UNEXPECTED_ERROR;
+			/*TODO: обработка других ошибок*/
 		}
 	}
-	// Если текущий узел - бинарный оператор
-	if (node->ChildsCount == 2)
+	// -3. If this node is BINARY OPERATOR, try to calculate it
+	else if (node->ChildsCount == 2)
 	{
 
 	}
-	// Если текущий узел - тернарный оператор
-	if (node->ChildsCount == 3)
+	// -4. If this node is TERNARY OPERATOR, try to calculate it
+	else if (node->ChildsCount == 3)
 	{
-
+		/*На практике таких формул не было замечено*/
 	}
-	return 1;
+	// +5. Если текущий узел - не пойми что
+	else
+		return UNEXPECTED_ERROR;
+
+	return OK;
 }
 
 
@@ -200,10 +229,15 @@ uint8_t Do_reverse_calculate_with_tree(uint32_t value, Tree::Node* node)
 * @brief Обратный расчет с помощью метода перебора
 * @note Может выполняться очень долго (до получаса при 4 байтах)
 * @param NeedValue - число, которое должен распарсить терминал
-* @return статус выполнения: 1 - все хорошо, 0 - ошибка
+* @return статус выполнения: 0 - все хорошо, иначе ошибка
 */
 uint8_t Do_reverse_calculate_with_brute_force(int64_t NeedValue)
 {
+	enum : uint8_t
+	{
+		OK = 0,
+		ERROR = 1,
+	};
 	for (uint16_t d0 = 0; d0 < 256; d0++)
 	{
 		for (uint16_t d1 = 0; d1 < 256; d1++)
@@ -214,12 +248,12 @@ uint8_t Do_reverse_calculate_with_brute_force(int64_t NeedValue)
 				Do_direct_calculate();
 				if (Value == NeedValue)
 				{
-					return 1;
+					return OK;
 				}
 			}
 		}
 	}
-	return 0;
+	return ERROR;
 }
 
 
@@ -227,10 +261,15 @@ uint8_t Do_reverse_calculate_with_brute_force(int64_t NeedValue)
 * @brief Обратный расчет с помощью метода дихотомии
 * @note Может не сойтись и зависнуть, однако относительно быстрый
 * @param NeedValue - число, которое должен распарсить терминал
-* @return статус выполнения: 1 - все хорошо, 0 - ошибка
+* @return статус выполнения: 0 - все хорошо, иначе ошибка
 */
 uint8_t Do_reverse_calculate_with_method_dichotomy(int64_t NeedValue)
 {
+	enum : uint8_t
+	{
+		OK = 0,
+		ERROR = 1,
+	};
 	uint32_t dataMinBorder = 0;
 	uint32_t dataMaxBorder = 16777215;
 	uint32_t dataGuess = 8388608;
@@ -259,7 +298,7 @@ uint8_t Do_reverse_calculate_with_method_dichotomy(int64_t NeedValue)
 		LastValue = Value;
 		Do_direct_calculate();
 	}
-	return 1;
+	return OK;
 }
 
 
