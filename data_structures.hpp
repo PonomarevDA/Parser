@@ -23,21 +23,20 @@ public:
         Node* Parent;
     };
 
-    //Tree() : Size(0), MaxSize(10) { ArrOfNodes = new Node[33]; }
-    //Tree(uint8_t maxSize) : Size(0), MaxSize(maxSize) { ArrOfNodes = new Node[MaxSize]; }
-    Tree() : Size(0), MaxSize(10) {}
-    Tree(uint8_t maxSize) : Size(0), MaxSize(maxSize) {}
+    Tree() : Size(0), MaxSize(10) {}						// конструктор без аргументов - размер 10
+    Tree(uint8_t maxSize) : Size(0), MaxSize(maxSize) {}	// конструктор с аргументом - размером дерева
 
-    Node* add_node_lower(uint8_t);
-    Node* add_node_parent(uint8_t, Node**, uint8_t);
-    Node* get_base_node();
+    Node* add_node_lower(uint8_t);							// добавить операнд (узел не имеет потомков)
+    Node* add_node_parent(uint8_t, Node**, uint8_t);		// добавить оператор (аргументы: байт вместе с потомками)
+    Node* get_base_node();									// получить указатель на самый верхний узел
 
     uint8_t get_size();
     uint8_t get_max_size();
 private:
+	uint8_t Size;
+	const uint8_t MaxSize;
     Node ArrOfNodes[32];
-    uint8_t Size;
-    uint8_t MaxSize;
+    
 };
 
 

@@ -64,6 +64,8 @@ uint8_t Tree::get_max_size()
 Tree::Node* Tree::get_base_node()
 {
     Tree::Node* node = &ArrOfNodes[0];
+	if (node == nullptr)
+		return node;
     while(node->Parent != nullptr)
     {
         node = node->Parent;
