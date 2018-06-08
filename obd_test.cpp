@@ -60,17 +60,30 @@ void TestOBD::Create_tree_for_reverse_DIV()
 
 
 /*
+* @brief Задать формулу d0/5
+*/
+void TestOBD::Create_tree_for_reverse_with_difficulties()
+{
+	const uint8_t paramNumber = 0;
+	ParamTable[0].FormulaLength = 12;
+	uint8_t arr[12] = { 0x01, 0x1A, 0x0D, 0x0D, 0x16, 0x02, 0x90, 0x16, 0x01, 0x88, 0x00, 0x8A };
+	memcpy(ParamTable[paramNumber].Formula, arr, ParamTable[paramNumber].FormulaLength);
+	Create_tree();
+}
+
+
+/*
 * @brief Тестирование 3-ех методов обратного решения задачи для заданной формулы
 * @note Результаты тестов выводит в терминал
 */
 void TestOBD::Test_calculation_reverse()
 {
-	(*this).Create_tree_for_reverse_DIV();
+	(*this).Create_tree_for_reverse_with_difficulties();
 	Show_formula();
 	Show_tree();
+	int64_t NeedValue = 4000;
 
 	std::cout << "\n\nReverse calculation (brut force):";
-	int64_t NeedValue = 100;
 	std::cout << "\nValue: " << NeedValue << "\n";
 	std::cout << "Frame: ";
 	Do_reverse_calculate_with_brute_force(NeedValue);
@@ -78,15 +91,13 @@ void TestOBD::Test_calculation_reverse()
 		std::cout << frame.Data[count] + 0 << " ";
 
 	std::cout << "\n\nReverse calculation (tree):";
-	NeedValue = 100;
 	std::cout << "\nValue: " << NeedValue << "\n";
 	std::cout << "Frame: ";
 	Do_reverse_calculate_with_tree(NeedValue);
 	for (uint8_t count = 0; count < 8; count++)
 		std::cout << frame.Data[count] + 0 << " ";
 
-	std::cout << "\n\nReverse calculation (method dichotomy):";
-	NeedValue = 100;
+	std::cout << "\n\nReverse calculation (method dichotomy) [work only with d0,d1,d2,d3]:";
 	std::cout << "\nValue: " << NeedValue << "\n";
 	std::cout << "Frame: ";
 	Do_reverse_calculate_with_method_dichotomy(NeedValue);
