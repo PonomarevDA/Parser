@@ -55,11 +55,12 @@ void Create_tree();					// Построить дерево синтаксического разбора
 
 // Методы выполнения алгоритма прямого/обратного расчета:
 void Do_direct_calculate();
-uint8_t Do_reverse_calculate_with_tree(uint32_t value, Tree::Node* node = nullptr);
+uint32_t Do_reverse_calculate_with_tree(uint32_t value, Tree::Node* node = nullptr);
 uint8_t Do_reverse_calculate_with_method_dichotomy(int64_t NeedValue);
 uint8_t Do_reverse_calculate_with_brute_force(int64_t NeedValue);
-uint32_t Calculate(uint8_t opcode, uint32_t operand1, uint32_t operand2 = 0, uint32_t operand3 = 0);
-void Test_calculations();
+uint32_t Calculate_direct(uint8_t opcode, uint32_t operand1, uint32_t operand2 = 0, uint32_t operand3 = 0);
+uint32_t Calculate_reverse(uint32_t value, uint8_t opcode, uint32_t operand1, uint32_t operand2 = 0, uint32_t operand3 = 0);
+
 
 // Методы иллюстрации результатов алгоритмов в терминале:
 void Show_formula();

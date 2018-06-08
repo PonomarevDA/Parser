@@ -5,10 +5,10 @@
 
 // Global and static variables:
 static Stack buf;
-static ParamTable_t ParamTable[1];
-static uint8_t ParamCount = 1;
-static Frame frame;
-static uint32_t Value = 0;
+ParamTable_t ParamTable[1];
+uint8_t ParamCount = 1;
+Frame frame;
+uint32_t Value = 0;
 
 /*
 * @brief Имитация инициализации тестового стенда
@@ -50,7 +50,7 @@ void Create_tree()
 		else
 		{
 			// Если унарный оператор <=> 1 наследник
-			if ( (byte == OPCODE_LOG_OR) || (byte == OPCODE_LOG_OR) || (byte == OPCODE_LOG_NOT) || (byte == OPCODE_BIT_NOT) )
+			if ( (byte == OPCODE_LOG_NOT) || (byte == OPCODE_BIT_NOT) )
 			{
 				uint8_t length = 1;
 				Tree::Node** ops = new Tree::Node*[length];
@@ -59,7 +59,7 @@ void Create_tree()
 				buf.Push(op);
 			}
 			// Если бинарный оператор <=> 2 наследника
-			else if ( (byte > OPCODE_BIT_OR) && (byte <= OPCODE_DIV))
+			else if ( (byte == OPCODE_LOG_OR) || (byte == OPCODE_LOG_AND) || ((byte > OPCODE_BIT_OR)&&(byte <= OPCODE_DIV)) )
 			{
 				uint8_t length = 2;
 				Tree::Node** ops = new Tree::Node*[length];
@@ -125,13 +125,13 @@ void Do_direct_calculate()
 			/// Âûáðàòü ÷èñëî îïåðàíäîâ, â çàâèñèìîñòè îò îïåðàòîðà
 			if ((operators[operatorIndex] == OPCODE_LOG_NOT) || (operators[operatorIndex] == OPCODE_BIT_NOT))
 			{
-				uint32_t result = Calculate(operators[operatorIndex], operands[operandIndex]);
+				uint32_t result = Calculate_direct(operators[operatorIndex], operands[operandIndex]);
 				operatorIndex -= 1;
 				operands[operandIndex] = result;
 			}
 			else if ((operators[operatorIndex] == OPCODE_IF_ELSE) && (operandIndex == 2))
 			{
-				uint32_t result = Calculate(operators[operatorIndex], operands[operandIndex], operands[operandIndex - 1], operands[operandIndex - 2]);
+				uint32_t result = Calculate_direct(operators[operatorIndex], operands[operandIndex], operands[operandIndex - 1], operands[operandIndex - 2]);
 				if (result == 0xFFFFFFFF)
 				{
 					ignore = true;
@@ -143,7 +143,7 @@ void Do_direct_calculate()
 			}
 			else
 			{
-				uint32_t result = Calculate(operators[operatorIndex], operands[operandIndex], operands[operandIndex - 1]);
+				uint32_t result = Calculate_direct(operators[operatorIndex], operands[operandIndex], operands[operandIndex - 1]);
 				operatorIndex -= 1;
 				operandIndex -= 1;
 				operands[operandIndex] = result;
@@ -157,9 +157,9 @@ void Do_direct_calculate()
 /*
 * @brief Выполнить попытку рукурсивного обратного расчета с помощью дерева
 * @param value - результат выполнения прямого расчета указанного узла (оператора)
-* @return valid - статус выполнения
+* @return рассчитанное число
 */
-uint8_t Do_reverse_calculate_with_tree(uint32_t value, Tree::Node* node)
+uint32_t Do_reverse_calculate_with_tree(uint32_t value, Tree::Node* node)
 {
 	enum: uint8_t
 	{
@@ -169,14 +169,20 @@ uint8_t Do_reverse_calculate_with_tree(uint32_t value, Tree::Node* node)
 		UNEXPECTED_ERROR = 255,
 	};
 	Tree::Node* base = ParamTable->tree.Get_base_node();
+	static uint8_t status = OK;
 	
-	// 0. Check correcntness:
+	// 0. Check correctness:
 	if (base == nullptr)
 		return BASE_IS_NULL;
 	if (node == nullptr)
+	{
 		node = base;
+		status = OK;
+	}
+	if (status != OK)
+		return 0;
 
-	// +1. If this node is OPERAND <=> this node is apex (висячая вершина)
+	// +1. If this node is OPERAND => this node is apex (висячая вершина)
 	if (node->ChildsCount == 0)
 	{
 		// This node must be Base
@@ -186,7 +192,7 @@ uint8_t Do_reverse_calculate_with_tree(uint32_t value, Tree::Node* node)
 		}
 		// Else, there is error in formula
 		else
-			return FORMULA_ERROR_NODE_IS_OPERAND;
+			status = FORMULA_ERROR_NODE_IS_OPERAND;
 	}
 	// -2. If this node is UNARY OPERATOR, try to calculate it
 	else if (node->ChildsCount == 1)
@@ -203,14 +209,33 @@ uint8_t Do_reverse_calculate_with_tree(uint32_t value, Tree::Node* node)
 		{
 			uint8_t status = Do_reverse_calculate_with_tree(value, node->ChildsArr[0]);
 			if (status == UNEXPECTED_ERROR)
-				return UNEXPECTED_ERROR;
+				status = UNEXPECTED_ERROR;
 			/*TODO: обработка других ошибок*/
 		}
 	}
 	// -3. If this node is BINARY OPERATOR, try to calculate it
 	else if (node->ChildsCount == 2)
 	{
-
+		uint8_t operand1 = node->ChildsArr[0]->Value;
+		uint8_t operand2 = node->ChildsArr[1]->Value;
+		if ((operand1 < 0x08) && (operand2 >= 0x80))
+		{
+			Calculate_reverse(value, node->Value, operand1, operand2);
+		}
+		else if ((operand1 >= 0x80) && (operand2 < 0x08))
+		{
+			Calculate_reverse(value, node->Value, operand1, operand2);
+		}
+		else if ((operand1 > 0x80) && (operand2 > 0x80))
+		{
+			Calculate_reverse(value, node->Value, operand1, operand2);
+		}
+		else
+		{
+			operand1 = Do_reverse_calculate_with_tree(value, node);
+			operand2 = Do_reverse_calculate_with_tree(value, node);
+			Calculate_reverse(value, node->Value, operand1, operand2);
+		}
 	}
 	// -4. If this node is TERNARY OPERATOR, try to calculate it
 	else if (node->ChildsCount == 3)
@@ -219,9 +244,9 @@ uint8_t Do_reverse_calculate_with_tree(uint32_t value, Tree::Node* node)
 	}
 	// +5. Если текущий узел - не пойми что
 	else
-		return UNEXPECTED_ERROR;
+		status = UNEXPECTED_ERROR;
 
-	return OK;
+	return value;
 }
 
 
@@ -311,7 +336,7 @@ uint8_t Do_reverse_calculate_with_method_dichotomy(int64_t NeedValue)
 * @param operand3 - второй оператор, если есть
 * @return - результат расчета выражения
 */
-uint32_t Calculate(uint8_t opcode, uint32_t operand1, uint32_t operand2, uint32_t operand3)
+uint32_t Calculate_direct(uint8_t opcode, uint32_t operand1, uint32_t operand2, uint32_t operand3)
 {
 	if (opcode == OPCODE_LOG_OR)			return operand1 || operand2;
 	else if (opcode == OPCODE_LOG_AND)		return operand1 && operand2;
@@ -348,34 +373,124 @@ uint32_t Calculate(uint8_t opcode, uint32_t operand1, uint32_t operand2, uint32_
 
 
 /*
-* @brief Тестовый кейс. Выполняет прямое и обратные решения задачи
-* @return Результаты выводит в терминал
+* @brief Определение байтов фрейма по формуле и по конечному значению
+* @param value - значение, полученное после подстановки переменных формулы
+* @param opcode - оператор
+* @param operand1 - первый оператор
+* @param operand2 - второй оператор, если есть
+* @param operand3 - второй оператор, если есть
+* @return в случае удачного расчета исходное значение, иначе 0
 */
-void Test_calculations()
+uint32_t Calculate_reverse(uint32_t value, uint8_t opcode, uint32_t operand1, uint32_t operand2, uint32_t operand3)
 {
-	std::cout << "Direct calculation:\n";
-	frame.Data[0] = 9; frame.Data[1] = 3; frame.Data[2] = 0; Value = 0;
-	std::cout << "Frame: ";
-	for (uint8_t count = 0; count < 8; count++)
+	value = value & 255;
+	// (+-)1. Если унарный оператор
+	if ( (opcode == OPCODE_LOG_NOT) || (opcode == OPCODE_BIT_NOT) )
 	{
-		std::cout << frame.Data[count] + 0 << " ";
-	}
-	Do_direct_calculate();
-	std::cout << "\nValue: " << Value << "\n";
-
-
-
-	std::cout << "\nInverse calculation:";
-	int64_t NeedValue = 167772140;
-	std::cout << "\nValue: " << NeedValue << "\n";
-	std::cout << "Frame: ";
-	Do_reverse_calculate_with_brute_force(NeedValue);
-	//Do_reverse_calculate_with_method_dichotomy(NeedValue);
-	for (uint8_t count = 0; count < 8; count++)
+		if (operand1 >= 0x80)
+			return Calculate_direct(opcode, operand1);
+		else if (operand1 < 0x08)
+		{
+			frame.Data[operand1] = Calculate_direct(opcode, value);
+			return value;
+		}
+		else
+			return 0;
+	}	
+	// (--)2. Если бинарный оператор
+	else if ( (opcode == OPCODE_LOG_OR) || (opcode == OPCODE_LOG_AND) || ( (opcode >= OPCODE_BIT_OR)&&(opcode <= OPCODE_DIV) ) )
 	{
-		std::cout << frame.Data[count] + 0 << " ";
+		// 2.1. Если 1-ый операнд - байт данных, а 2-ой - константа
+		if ((operand1 < 0x08) && (operand2 > 0x80))
+		{
+			switch(opcode)
+			{
+				case OPCODE_ADD:
+				{
+					frame.Data[operand1] = value - (operand2 - 0x80);
+					break;
+				}
+				case OPCODE_SUB:
+				{
+					frame.Data[operand1] = value + (operand2 - 0x80);
+					break;
+				}
+				case OPCODE_MUL:
+				{
+					frame.Data[operand1] = value / (operand2 - 0x80);
+					break;
+				}
+				case OPCODE_DIV:
+				{
+					frame.Data[operand1] = value * (operand2 - 0x80);
+					break;
+				}
+			}
+			return value;
+		}
+		// 2.2. Если 2-ой операнд - байт данных, а 1-ый - константа
+		else if ((operand1 > 0x80) && (operand2 < 0x08))
+		{
+			switch (opcode)
+			{
+				case OPCODE_ADD:
+				{
+					frame.Data[operand2] = value - (operand1 - 0x80);
+					break;
+				}
+				case OPCODE_SUB:
+				{
+					frame.Data[operand2] = (operand1 - 0x80) - value;
+					break;
+				}
+				case OPCODE_MUL:
+				{
+					frame.Data[operand2] = value / (operand1 - 0x80);
+					break;
+				}
+				case OPCODE_DIV:
+				{
+					frame.Data[operand2] = (operand1 - 0x80) / value;
+					break;
+				}
+			}
+			return value;
+		}
+		// (+-)2.3. Если 1-ый и 2-ой операнды - константы
+		else if ((operand1 > 0x80) && (operand2 > 0x80))
+		{
+			return Calculate_direct(opcode, operand1, operand2);
+		}
+		// 2.4. Иную ситуацию должны исключать функциии, вызывающие данную
+		else
+			return 0;
 	}
+	// 3. Если тернарный оператор
+	else if (opcode == OPCODE_IF_ELSE)
+	{
+		if (operand1)
+		{
+			return operand2;
+		}
+		else
+		{
+			return 0xFFFFFFFF;
+		}
+	}
+	if (opcode == OPCODE_BIT_OR)		return operand1 | operand2;
+	else if (opcode == OPCODE_BIT_XOR)		return operand1 ^ operand2;
+	else if (opcode == OPCODE_BIT_AND)		return operand1 & operand2;
+	else if (opcode == OPCODE_EQU)			return operand1 == operand2;
+	else if (opcode == OPCODE_NEQU)			return operand1 != operand2;
+	else if (opcode == OPCODE_LESS)			return operand1 < operand2;
+	else if (opcode == OPCODE_MORE)			return operand1 > operand2;
+	else if (opcode == OPCODE_LESS_EQU)		return operand1 <= operand2;
+	else if (opcode == OPCODE_MORE_EQU)		return operand1 >= operand2;
+	else if (opcode == OPCODE_SHIFT_LEFT)	return operand1 << operand2;
+	else if (opcode == OPCODE_SHIFT_RIGHT)	return operand1 >> operand2;
 
+
+	return 0;
 }
 
 
