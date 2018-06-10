@@ -10,6 +10,27 @@ uint8_t ParamCount = 1;
 Frame frame;
 uint32_t Value = 0;
 
+inline uint8_t IsItDataFrame(uint8_t byte)
+{
+    return (byte < 0x08)?1:0;
+}
+
+inline uint8_t IsItConst(uint8_t byte)
+{
+    return (byte >= 0x80)?1:0;
+}
+
+inline uint8_t IsItOperator(uint8_t byte)
+{
+    return ( (byte >= 0x08) && (byte < 0x80) )?1:0;
+}
+
+inline uint8_t IsItOperand(uint8_t byte)
+{
+    return ( (byte < 0x08) || (byte >= 0x80) )?1:0;
+}
+
+
 /*
 * @brief Имитация инициализации тестового стенда
 */
@@ -59,7 +80,7 @@ void CreateTree()
                 buf.Push(op);
             }
             // Если бинарный оператор <=> 2 наследника
-            else if ( (byte == OPCODE_LOG_OR) || (byte == OPCODE_LOG_AND) || ((byte > OPCODE_BIT_OR)&&(byte <= OPCODE_DIV)) )
+            else if ( (byte == OPCODE_LOG_OR) || (byte == OPCODE_LOG_AND) || ((byte >= OPCODE_BIT_OR)&&(byte <= OPCODE_DIV)) )
             {
                 uint8_t length = 2;
                 Tree::Node** ops = new Tree::Node*[length];
@@ -125,13 +146,13 @@ void DoDirectCalculate()
             /// Âûáðàòü ÷èñëî îïåðàíäîâ, â çàâèñèìîñòè îò îïåðàòîðà
             if ((operators[operatorIndex] == OPCODE_LOG_NOT) || (operators[operatorIndex] == OPCODE_BIT_NOT))
             {
-                uint32_t result = CalculateDirect(operators[operatorIndex], operands[operandIndex]);
+                uint32_t result = CalculateDirectElementary(operators[operatorIndex], operands[operandIndex]);
                 operatorIndex -= 1;
                 operands[operandIndex] = result;
             }
             else if ((operators[operatorIndex] == OPCODE_IF_ELSE) && (operandIndex == 2))
             {
-                uint32_t result = CalculateDirect(operators[operatorIndex], operands[operandIndex], operands[operandIndex - 1], operands[operandIndex - 2]);
+                uint32_t result = CalculateDirectElementary(operators[operatorIndex], operands[operandIndex], operands[operandIndex - 1], operands[operandIndex - 2]);
                 if (result == 0xFFFFFFFF)
                 {
                     ignore = true;
@@ -143,7 +164,7 @@ void DoDirectCalculate()
             }
             else
             {
-                uint32_t result = CalculateDirect(operators[operatorIndex], operands[operandIndex], operands[operandIndex - 1]);
+                uint32_t result = CalculateDirectElementary(operators[operatorIndex], operands[operandIndex], operands[operandIndex - 1]);
                 operatorIndex -= 1;
                 operandIndex -= 1;
                 operands[operandIndex] = result;
@@ -186,7 +207,7 @@ uint32_t DoReverseCalculateWithTree(uint32_t value, Tree::Node* node)
     if (node->ChildsCount == 0)
     {
         // This node must be Base
-        if ((node == base) && (node->Value < 0x08))
+        if ((node == base) && IsItDataFrame(node->Value) )
         {
             frame.Data[node->Value] = value;
         }
@@ -200,9 +221,9 @@ uint32_t DoReverseCalculateWithTree(uint32_t value, Tree::Node* node)
         uint8_t childByte = base->ChildsArr[0]->Value;
 
         // If child node is OPERAND, try to calculate it
-        if ((childByte > 0x08) && (childByte < 0x80))
+        if (IsItOperand(childByte))
         {
-            value = CalculateReverse(value, node->Value, childByte);
+            value = CalculateReverseElementary(value, node->Value, childByte);
         }
         // If child node is OPERATOR, try to recursively calculate it
         else
@@ -218,17 +239,20 @@ uint32_t DoReverseCalculateWithTree(uint32_t value, Tree::Node* node)
     {
         uint8_t operand1 = node->ChildsArr[0]->Value;
         uint8_t operand2 = node->ChildsArr[1]->Value;
-        if ((operand1 < 0x08) && (operand2 >= 0x80))
-            value = CalculateReverse(value, node->Value, operand1, operand2);
-        else if ((operand1 >= 0x80) && (operand2 < 0x08))
-            value = CalculateReverse(value, node->Value, operand1, operand2);
-        else if ((operand1 > 0x80) && (operand2 > 0x80))
-            value = CalculateReverse(value, node->Value, operand1, operand2);
+        // (const, data) or (data, const)
+        if ( (IsItDataFrame(operand1) && IsItConst(operand2) ) || ( IsItConst(operand1) && IsItDataFrame(operand2) ) )
+            value = CalculateReverseElementary(value, node->Value, operand1, operand2);
+        // const, const
+        else if ( IsItConst(operand1) && IsItConst(operand2) )
+            value = CalculateDirectElementary(node->Value, operand1, operand2);
+
+        else if ( IsItConst(operand1) && IsItOperator(operand2) )
+            value = CalculateReverseElementary(value, node->Value, operand1, operand2);
         else
         {
             operand1 = DoReverseCalculateWithTree(value, node);
             operand2 = DoReverseCalculateWithTree(value, node);
-            value = CalculateReverse(value, node->Value, operand1, operand2);
+            value = CalculateReverseElementary(value, node->Value, operand1, operand2);
         }
     }
     // -4. If this node is TERNARY OPERATOR, try to calculate it
@@ -328,7 +352,7 @@ uint8_t DoReverseCalculateWithMethodDichotomy(int64_t NeedValue)
 * @param operand3 - второй оператор, если есть
 * @return - результат расчета выражения
 */
-uint32_t CalculateDirect(uint8_t opcode, uint32_t operand1, uint32_t operand2, uint32_t operand3)
+uint32_t CalculateDirectElementary(uint8_t opcode, uint32_t operand1, uint32_t operand2, uint32_t operand3)
 {
     if (opcode == OPCODE_LOG_OR)			return operand1 || operand2;
     else if (opcode == OPCODE_LOG_AND)		return operand1 && operand2;
@@ -371,213 +395,127 @@ uint32_t CalculateDirect(uint8_t opcode, uint32_t operand1, uint32_t operand2, u
 * @param operand1 - первый оператор
 * @param operand2 - второй оператор, если есть
 * @param operand3 - второй оператор, если есть
-* @return в случае удачного расчета исходное значение, иначе 0
+* @note Предполагается, что 1 из аргументов - константа
+* @return partOfUnknownOperand - незивестный операнд
 */
-uint32_t CalculateReverse(uint32_t value, uint8_t opcode, uint32_t operand1, uint32_t operand2, uint32_t operand3)
+uint32_t CalculateReverseElementary(uint32_t value, uint8_t opcode, uint32_t operand1, uint32_t operand2, uint32_t operand3)
 {
+    uint32_t partOfUnknownOperand = 0;
     // (+-)1. Если унарный оператор
     if ( (opcode == OPCODE_LOG_NOT) || (opcode == OPCODE_BIT_NOT) )
-    {
-        if (operand1 >= 0x80)
-            value = CalculateDirect(opcode, operand1);
-        else if (operand1 < 0x08)
-            frame.Data[operand1] = CalculateDirect(opcode, value);
-        else
-            return 0;
-    }
-    // (++)2. Если бинарный оператор
+        partOfUnknownOperand = CalculateDirectElementary(opcode, value);
+
+    // (+-)2. Если бинарный оператор
     else if ( (opcode == OPCODE_LOG_OR) || (opcode == OPCODE_LOG_AND) || ( (opcode >= OPCODE_BIT_OR)&&(opcode <= OPCODE_DIV) ) )
     {
-        // 2.1. Если 1-ый операнд - байт данных, а 2-ой - константа
-        if ((operand1 < 0x08) && (operand2 > 0x80))
-        {
-            switch(opcode)
-            {
-                case OPCODE_LOG_OR:
-                {
-                    frame.Data[operand1] = (value)?1:0;
-                    break;
-                }
-                case OPCODE_LOG_AND:
-                {
-                    frame.Data[operand1] = (value) ? 1 : 0;
-                    break;
-                }
-                case OPCODE_BIT_OR:
-                {
-                    frame.Data[operand1] |= (value&(~operand2));
-                    break;
-                }
-                case OPCODE_BIT_XOR:
-                {
-                    /*TODO*/
-                    break;
-                }
-                case OPCODE_BIT_AND:
-                {
-                    frame.Data[operand1] |= (value&operand2);
-                    break;
-                }
-                case OPCODE_EQU:
-                {
-                    frame.Data[operand1] = (value) ? operand2 : 0;
-                    break;
-                }
-                case OPCODE_NEQU:
-                {
-                    frame.Data[operand1] = (value) ? 0 : operand2;
-                    break;
-                }
-                case OPCODE_LESS:
-                {
-                    /*ERROR*/
-                    break;
-                }
-                case OPCODE_MORE:
-                {
-                    /*ERROR*/
-                    break;
-                }
-                case OPCODE_LESS_EQU:
-                {
-                    /*ERROR*/
-                    break;
-                }
-                case OPCODE_MORE_EQU:
-                {
-                    /*ERROR*/
-                    break;
-                }
-                case OPCODE_SHIFT_LEFT:
-                {
-                    frame.Data[operand1] = value >> operand2;
-                    break;
-                }
-                case OPCODE_SHIFT_RIGHT:
-                {
-                    frame.Data[operand1] |= value << operand2;
-                    break;
-                }
-                case OPCODE_ADD:
-                {
-                    frame.Data[operand1] = value - (operand2 - 0x80);
-                    break;
-                }
-                case OPCODE_SUB:	// dependent
-                {
-                    frame.Data[operand1] = value + (operand2 - 0x80);
-                    break;
-                }
-                case OPCODE_MUL:
-                {
-                    frame.Data[operand1] = value / (operand2 - 0x80);
-                    break;
-                }
-                case OPCODE_DIV:	// dependent
-                {
-                    frame.Data[operand1] = value * (operand2 - 0x80);
-                    break;
-                }
-            }
-        }
-        // 2.2. Если 2-ой операнд - байт данных, а 1-ый - константа
-        else if ((operand1 > 0x80) && (operand2 < 0x08))
-        {
-            switch (opcode)
-            {
-                case OPCODE_LOG_OR:
-                {
-                    frame.Data[operand2] = (value) ? 1 : 0;
-                    break;
-                }
-                case OPCODE_LOG_AND:
-                {
-                    frame.Data[operand2] = (value) ? 1 : 0;
-                    break;
-                }
-                case OPCODE_BIT_OR:
-                {
-                    frame.Data[operand2] |= (value&(~operand1));
-                    break;
-                }
-                case OPCODE_BIT_XOR:
-                {
-                    /*TODO*/
-                    break;
-                }
-                case OPCODE_BIT_AND:
-                {
-                    frame.Data[operand2] |= (value&operand1);
-                    break;
-                }
-                case OPCODE_EQU:
-                {
-                    frame.Data[operand2] = (value) ? operand1 : 0;
-                    break;
-                }
-                case OPCODE_NEQU:
-                {
-                    frame.Data[operand2] = (value) ? 0 : operand1;
-                    break;
-                }
-                case OPCODE_LESS:
-                {
-                    /*ERROR*/
-                    break;
-                }
-                case OPCODE_MORE:
-                {
-                    /*ERROR*/
-                    break;
-                }
-                case OPCODE_LESS_EQU:
-                {
-                    /*ERROR*/
-                    break;
-                }
-                case OPCODE_MORE_EQU:
-                {
-                    /*ERROR*/
-                    break;
-                }
-                case OPCODE_SHIFT_LEFT:
-                {
-                    frame.Data[operand2] = value >> operand1;
-                    break;
-                }
-                case OPCODE_SHIFT_RIGHT:
-                {
-                    frame.Data[operand2] |= value << operand1;
-                    break;
-                }
-                case OPCODE_ADD:
-                {
-                    frame.Data[operand2] = value - (operand1 - 0x80);
-                    break;
-                }
-                case OPCODE_SUB:	// dependent
-                {
-                    frame.Data[operand2] = (operand1 - 0x80) - value;
-                    break;
-                }
-                case OPCODE_MUL:
-                {
-                    frame.Data[operand2] = value / (operand1 - 0x80);
-                    break;
-                }
-                case OPCODE_DIV:	// dependent
-                {
-                    frame.Data[operand2] = (operand1 - 0x80) / value;
-                    break;
-                }
-            }
-        }
-        // (+-)2.3. Если 1-ый и 2-ой операнды - константы
-        else if ((operand1 > 0x80) && (operand2 > 0x80))
-            value = CalculateDirect(opcode, operand1, operand2);
-        // 2.4. Иную ситуацию должны исключать функциии, вызывающие данную
+        uint8_t knownOperand;
+        if ( IsItConst(operand1) )
+            knownOperand = operand1;
+        else if ( IsItConst(operand2) )
+            knownOperand = operand2;
         else
             return 0;
+
+        // 2.1. Выполнение обратного расчета
+        switch(opcode)
+        {
+            case OPCODE_LOG_OR:
+            {
+                partOfUnknownOperand = (value)?1:0;
+                break;
+            }
+            case OPCODE_LOG_AND:
+            {
+                partOfUnknownOperand = (value) ? 1 : 0;
+                break;
+            }
+            case OPCODE_BIT_OR:
+            {
+                partOfUnknownOperand = (value&(~knownOperand));
+                break;
+            }
+            case OPCODE_BIT_XOR:
+            {
+                /*TODO*/
+                break;
+            }
+            case OPCODE_BIT_AND:
+            {
+                partOfUnknownOperand = (value&knownOperand);
+                break;
+            }
+            case OPCODE_EQU:
+            {
+                partOfUnknownOperand = (value) ? knownOperand : 0;
+                break;
+            }
+            case OPCODE_NEQU:
+            {
+                partOfUnknownOperand = (value) ? 0 : knownOperand;
+                break;
+            }
+            case OPCODE_LESS:
+            {
+                /*ERROR*/
+                break;
+            }
+            case OPCODE_MORE:
+            {
+                /*ERROR*/
+                break;
+            }
+            case OPCODE_LESS_EQU:
+            {
+                /*ERROR*/
+                break;
+            }
+            case OPCODE_MORE_EQU:
+            {
+                /*ERROR*/
+                break;
+            }
+            case OPCODE_SHIFT_LEFT:
+            {
+                partOfUnknownOperand = value >> knownOperand;
+                break;
+            }
+            case OPCODE_SHIFT_RIGHT:
+            {
+                partOfUnknownOperand = value << knownOperand;
+                break;
+            }
+            case OPCODE_ADD:
+            {
+                partOfUnknownOperand = value - (knownOperand - 0x80);
+                break;
+            }
+            case OPCODE_SUB:	// dependent
+            {
+                if( IsItConst(operand2) )
+                    partOfUnknownOperand = value + (knownOperand - 0x80);
+                else
+                    partOfUnknownOperand = (knownOperand - 0x80) - value;
+                break;
+            }
+            case OPCODE_MUL:
+            {
+                partOfUnknownOperand = value / (knownOperand - 0x80);
+                break;
+            }
+            case OPCODE_DIV:	// dependent
+            {
+                if( IsItConst(knownOperand) )
+                    partOfUnknownOperand = value * (knownOperand - 0x80);
+                else
+                    partOfUnknownOperand = (knownOperand - 0x80) / value;
+                break;
+            }
+        }
+        // 2.2. Заполнение байт данных фрейма соответствующими значениями
+        if ( IsItDataFrame(operand1) )
+            frame.Data[operand1] |= partOfUnknownOperand;
+        else if ( IsItDataFrame(operand2) )
+            frame.Data[operand2] |= partOfUnknownOperand;
     }
     // 3. Если тернарный оператор
     else if (opcode == OPCODE_IF_ELSE)
@@ -591,7 +529,7 @@ uint32_t CalculateReverse(uint32_t value, uint8_t opcode, uint32_t operand1, uin
             return 0xFFFFFFFF;
         }
     }
-    return value;
+    return partOfUnknownOperand;
 }
 
 

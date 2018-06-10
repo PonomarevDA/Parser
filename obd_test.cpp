@@ -1,6 +1,8 @@
 #include "obd_test.hpp"
 #include "obd.hpp"
 #include <iostream>
+#include <cstring>
+
 
 extern ParamTable_t ParamTable[1];
 extern uint8_t ParamCount;
@@ -78,14 +80,15 @@ void TestOBD::CreateTreeForReverseWithDifficulties()
 */
 void TestOBD::TestCalculationReverse()
 {
-    (*this).CreateTreeForReverseWithDifficulties();
+    (*this).CreateTreeForReverseDIV();
     ShowFormula();
     ShowTree();
-    int64_t NeedValue = 4000;
+    int64_t NeedValue = 50;
 
     std::cout << "\n\nReverse calculation (brut force):";
     std::cout << "\nValue: " << NeedValue << "\n";
     std::cout << "Frame: ";
+    memset(frame.Data, 0, 8);
     DoReverseCalculateWithBruteForce(NeedValue);
     for (uint8_t count = 0; count < 8; count++)
         std::cout << frame.Data[count] + 0 << " ";
@@ -93,6 +96,7 @@ void TestOBD::TestCalculationReverse()
     std::cout << "\n\nReverse calculation (tree):";
     std::cout << "\nValue: " << NeedValue << "\n";
     std::cout << "Frame: ";
+    memset(frame.Data, 0, 8);
     DoReverseCalculateWithTree(NeedValue);
     for (uint8_t count = 0; count < 8; count++)
         std::cout << frame.Data[count] + 0 << " ";
@@ -100,6 +104,7 @@ void TestOBD::TestCalculationReverse()
     std::cout << "\n\nReverse calculation (method dichotomy) [work only with d0,d1,d2,d3]:";
     std::cout << "\nValue: " << NeedValue << "\n";
     std::cout << "Frame: ";
+    memset(frame.Data, 0, 8);
     DoReverseCalculateWithMethodDichotomy(NeedValue);
     for (uint8_t count = 0; count < 8; count++)
         std::cout << frame.Data[count] + 0 << " ";

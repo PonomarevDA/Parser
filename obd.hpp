@@ -58,8 +58,8 @@ void DoDirectCalculate();
 uint32_t DoReverseCalculateWithTree(uint32_t value, Tree::Node* node = nullptr);
 uint8_t DoReverseCalculateWithMethodDichotomy(int64_t NeedValue);
 uint8_t DoReverseCalculateWithBruteForce(int64_t NeedValue);
-uint32_t CalculateDirect(uint8_t opcode, uint32_t operand1, uint32_t operand2 = 0, uint32_t operand3 = 0);
-uint32_t CalculateReverse(uint32_t value, uint8_t opcode, uint32_t operand1, uint32_t operand2 = 0, uint32_t operand3 = 0);
+uint32_t CalculateDirectElementary(uint8_t opcode, uint32_t operand1, uint32_t operand2 = 0, uint32_t operand3 = 0);
+uint32_t CalculateReverseElementary(uint32_t value, uint8_t opcode, uint32_t operand1, uint32_t operand2 = 0, uint32_t operand3 = 0);
 
 
 // Методы иллюстрации результатов алгоритмов в терминале:
