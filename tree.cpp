@@ -1,16 +1,19 @@
 /*
 * @File Файл с реализацией методов класса Tree
+* @note Данное дерево предназначено для проведения разбора формул и выполнения
+* обратного вычисления.
 */
+
 #include "data_structures.hpp"
-#include "obd.hpp"
 #include <cstring>
+
 
 /*
 * @brief Добавить узел нижнего уровня, т.е. у которого никогда не будет детей
 * @param value - значение узла
 * @note Если памяти не хватает - игнорируем
 */
-Tree::Node* Tree::Add_node_lower(uint8_t value)
+Tree::Node* Tree::AddNodeLower(uint8_t value)
 {
     if (Size < MaxSize)
     {
@@ -27,7 +30,7 @@ Tree::Node* Tree::Add_node_lower(uint8_t value)
 * @param value - значение узла
 * @return указатель на узел, иначе nullptr
 */
-Tree::Node* Tree::Add_node_parent(uint8_t value, Node** childsArr, uint8_t childsCount)
+Tree::Node* Tree::AddNodeParent(uint8_t value, Node** childsArr, uint8_t childsCount)
 {
     if (Size < MaxSize)
     {
@@ -36,7 +39,6 @@ Tree::Node* Tree::Add_node_parent(uint8_t value, Node** childsArr, uint8_t child
         ArrOfNodes[Size].ChildsCount = childsCount;
         while(childsCount-- != 0)
             (*(childsArr)++)->Parent = &ArrOfNodes[Size];
-
         return &ArrOfNodes[Size++];
     }
     return nullptr;
@@ -47,7 +49,7 @@ Tree::Node* Tree::Add_node_parent(uint8_t value, Node** childsArr, uint8_t child
 * @brief Получить текущий размер дерева (текущее кол-во узлов)
 * @return текущий размер дерева
 */
-uint8_t Tree::Get_size()
+uint8_t Tree::GetSize()
 {
     return Size;
 }
@@ -57,7 +59,7 @@ uint8_t Tree::Get_size()
 * @brief Получить максимальный размер дерева (максимальное кол-во узлов)
 * @return максимальный размер дерева
 */
-uint8_t Tree::Get_max_size()
+uint8_t Tree::GetMaxSize()
 {
     return MaxSize;
 }
@@ -67,14 +69,12 @@ uint8_t Tree::Get_max_size()
 * @brief Получить указатель на самый верхний узел (родитель всех узлов)
 * @return указатель на самый верхний узел
 */
-Tree::Node* Tree::Get_base_node()
+Tree::Node* Tree::GetBaseNode()
 {
     Tree::Node* node = &ArrOfNodes[0];
-	if (node == nullptr)
-		return node;
+    if (node == nullptr)
+        return node;
     while(node->Parent != nullptr)
-    {
         node = node->Parent;
-    }
     return node;
 }

@@ -5,8 +5,6 @@ typedef unsigned char uint8_t;
 typedef signed char int8_t;
 typedef unsigned int uint32_t;
 
-//#include <obd.hpp>
-
 /*
 * @brief Дерево постоянного указанного заранее размера
 */
@@ -25,18 +23,18 @@ public:
         Node* Parent;
     };
 
-    Tree() : Size(0), MaxSize(10) {}						// конструктор без аргументов - размер 10
-    Tree(uint8_t maxSize) : Size(0), MaxSize(maxSize) {}	// конструктор с аргументом - размером дерева
+    Tree() : Size(0), MaxSize(10) {}						// конструктор без аргументов - размер 32
+    Tree(uint8_t maxSize) : Size(0), MaxSize(maxSize) {}	/*TODO: конструктор с аргументом, но размер все равно 32*/
 
-    Node* Add_node_lower(uint8_t);							// добавить операнд (узел не имеет потомков)
-    Node* Add_node_parent(uint8_t, Node**, uint8_t);		// добавить оператор (аргументы: байт вместе с потомками)
-    Node* Get_base_node();									// получить указатель на самый верхний узел
+    Node* AddNodeLower(uint8_t);							// добавить операнд (узел не имеет потомков)
+    Node* AddNodeParent(uint8_t, Node**, uint8_t);          // добавить оператор (аргументы: байт вместе с потомками)
+    Node* GetBaseNode();									// получить указатель на самый верхний узел
 
-    uint8_t Get_size();
-    uint8_t Get_max_size();
+    uint8_t GetSize();
+    uint8_t GetMaxSize();
 private:
-	uint8_t Size;
-	const uint8_t MaxSize;
+    uint8_t Size;
+    const uint8_t MaxSize;
     Node ArrOfNodes[32];
 };
 
@@ -51,10 +49,10 @@ public:
     void Push(Tree::Node*);
     Tree::Node* Pop();
 private:
-	const uint8_t MaxSize;
-	uint8_t Size;
+    uint8_t Size;
+    const uint8_t MaxSize;
     Tree::Node* Arr[32];
-    
+
 };
 
 #endif // __DATASTRUCTURES

@@ -1,19 +1,28 @@
 /*
 * @File Файл с реализацией методов класса Stack
 */
+
 #include "data_structures.hpp"
-#include "obd.hpp"
 
 
+/*
+* @File Операция стека - push
+* @param ptrNode - указатель на узел
+*/
 void Stack::Push(Tree::Node* ptrNode)
 {
-	if(Size < MaxSize)
-		Arr[Size++] = ptrNode;
+    if(Size < MaxSize)
+        Arr[Size++] = ptrNode;
 }
 
+
+/*
+* @File Операция стека - pop
+* @return указатель на узел
+*/
 Tree::Node* Stack::Pop()
 {
-	if(Size != 0)
-		return Arr[--Size];
-	return nullptr;
+    if(Size != 0)
+        return Arr[--Size];
+    return nullptr;
 }

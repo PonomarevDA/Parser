@@ -4,14 +4,14 @@
 class TestOBD
 {
 private:
-	void Create_tree_for_reverse_ADD();
-	void Create_tree_for_reverse_SUB();
-	void Create_tree_for_reverse_MUL();
-	void Create_tree_for_reverse_DIV();
-	void Create_tree_for_reverse_with_difficulties();
+    void CreateTreeForReverseADD();
+    void CreateTreeForReverseSUB();
+    void CreateTreeForReverseMUL();
+    void CreateTreeForReverseDIV();
+    void CreateTreeForReverseWithDifficulties();
 public:
-	void Test_calculation_reverse();
-	void Test_calculations();
+    void TestCalculationReverse();
+    void TestCalculations();
 };
 
 
