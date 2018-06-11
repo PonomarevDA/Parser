@@ -1,7 +1,9 @@
 #ifndef __OBD_TEST
 #define __OBD_TEST
 
-class TestOBD
+#include "obd.hpp"
+
+class TestOBD: public OBD
 {
 private:
     void CreateTreeForReverseADD();

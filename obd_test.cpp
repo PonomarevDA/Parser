@@ -1,13 +1,6 @@
 #include "obd_test.hpp"
-#include "obd.hpp"
 #include <iostream>
 #include <cstring>
-
-
-extern ParamTable_t ParamTable[1];
-extern uint8_t ParamCount;
-extern Frame frame;
-extern uint32_t Value;
 
 /*
 * @brief Задать формулу d0+5
@@ -80,10 +73,10 @@ void TestOBD::CreateTreeForReverseWithDifficulties()
 */
 void TestOBD::TestCalculationReverse()
 {
-    (*this).CreateTreeForReverseDIV();
+    (*this).CreateTreeForReverseWithDifficulties();
     ShowFormula();
     ShowTree();
-    int64_t NeedValue = 50;
+    int64_t NeedValue = 5000;
 
     std::cout << "\n\nReverse calculation (brut force):";
     std::cout << "\nValue: " << NeedValue << "\n";

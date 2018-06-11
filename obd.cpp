@@ -2,14 +2,6 @@
 #include "cstring"  // для memcpy
 #include <iostream>
 
-
-// Global and static variables:
-static Stack buf;
-ParamTable_t ParamTable[1];
-uint8_t ParamCount = 1;
-Frame frame;
-uint32_t Value = 0;
-
 inline uint8_t IsItDataFrame(uint8_t byte)
 {
     return (byte < 0x08)?1:0;
@@ -34,9 +26,12 @@ inline uint8_t IsItOperand(uint8_t byte)
 /*
 * @brief Имитация инициализации тестового стенда
 */
-void Init()
+void OBD::Init()
 {
-    const uint8_t paramNumber = 0;
+    ParamCount = 1;
+    Value = 0;
+
+    uint8_t paramNumber = 0;
     /*
     ParamTable[0].flength = 32;
     uint8_t arr[32] = {0x01, 0x1B, 0x1B, 0x18, 0x1A, 0x18, 0x1A, 0x19,
@@ -54,7 +49,7 @@ void Init()
 /*
 * @brief Построение дерева синтаксического разбора формулы
 */
-void CreateTree()
+void OBD::CreateTree()
 {
     const uint8_t paramNumber = 0;
 
@@ -110,7 +105,7 @@ void CreateTree()
 * @brief Выполнение прямого расчета по формуле
 * @note Скопировано из тестового стенда
 */
-void DoDirectCalculate()
+void OBD::DoDirectCalculate()
 {
     uint8_t param = 0;
     uint8_t operators[16];
@@ -180,7 +175,7 @@ void DoDirectCalculate()
 * @param value - результат выполнения прямого расчета указанного узла (оператора)
 * @return рассчитанное число
 */
-uint32_t DoReverseCalculateWithTree(uint32_t value, Tree::Node* node)
+uint32_t OBD::DoReverseCalculateWithTree(uint32_t value, Tree::Node* node)
 {
     enum: uint8_t
     {
@@ -280,7 +275,7 @@ uint32_t DoReverseCalculateWithTree(uint32_t value, Tree::Node* node)
 * @param NeedValue - число, которое должен распарсить терминал
 * @return статус выполнения: 0 - все хорошо, иначе ошибка
 */
-uint8_t DoReverseCalculateWithBruteForce(int64_t needValue)
+uint8_t OBD::DoReverseCalculateWithBruteForce(int64_t needValue)
 {
     enum : uint8_t
     {
@@ -312,7 +307,7 @@ uint8_t DoReverseCalculateWithBruteForce(int64_t needValue)
 * @param NeedValue - число, которое должен распарсить терминал
 * @return статус выполнения: 0 - все хорошо, иначе ошибка
 */
-uint8_t DoReverseCalculateWithMethodDichotomy(int64_t NeedValue)
+uint8_t OBD::DoReverseCalculateWithMethodDichotomy(int64_t NeedValue)
 {
     enum : uint8_t
     {
@@ -358,7 +353,7 @@ uint8_t DoReverseCalculateWithMethodDichotomy(int64_t NeedValue)
 * @param operand3 - второй оператор, если есть
 * @return - результат расчета выражения
 */
-uint32_t CalculateDirectElementary(uint8_t opcode, uint32_t operand1, uint32_t operand2, uint32_t operand3)
+uint32_t OBD::CalculateDirectElementary(uint8_t opcode, uint32_t operand1, uint32_t operand2, uint32_t operand3)
 {
     if (opcode == OPCODE_LOG_OR)			return operand1 || operand2;
     else if (opcode == OPCODE_LOG_AND)		return operand1 && operand2;
@@ -404,7 +399,7 @@ uint32_t CalculateDirectElementary(uint8_t opcode, uint32_t operand1, uint32_t o
 * @note Предполагается, что хотя бы 1 из аргументов константа или байт данных фрейма
 * @return partOfUnknownOperand - незивестный операнд
 */
-uint32_t CalculateReverseElementary(uint32_t value, uint8_t opcode, uint32_t operand1, uint32_t operand2, uint32_t operand3)
+uint32_t OBD::CalculateReverseElementary(uint32_t value, uint8_t opcode, uint32_t operand1, uint32_t operand2, uint32_t operand3)
 {
     uint32_t unknownValue = 0;
     // (+-)1. Если унарный оператор
@@ -495,7 +490,7 @@ uint32_t CalculateReverseElementary(uint32_t value, uint8_t opcode, uint32_t ope
 /*
 * @brief Выводит в терминал формулу, полученную из конфигуратора
 */
-void ShowFormula()
+void OBD::ShowFormula()
 {
     const uint8_t paramNumber = 0;
     std::cout << "Formula[0]:" << std::endl;
@@ -512,7 +507,7 @@ void ShowFormula()
 /*
 * @brief Выводит в терминал распарсенный байт формулы
 */
-void ShowByte(uint8_t byte)
+void OBD::ShowByte(uint8_t byte)
 {
     if(byte < 0x08)
         std::cout << "d" << byte + 0 << " ";
@@ -542,7 +537,7 @@ void ShowByte(uint8_t byte)
 /*
 * @brief Выводит в терминал операторы дерева, начиная с верхнего узла, если возможно
 */
-void ShowTree()
+void OBD::ShowTree()
 {
     const uint8_t paramNumber = 0;
     Tree::Node* ptrNode = ParamTable[paramNumber].tree.GetBaseNode();
@@ -559,7 +554,7 @@ void ShowTree()
 /*
 * @brief Рекурсивно выводит в терминал операторы дерева
 */
-void ShowTreeNode(Tree::Node* ptrNode)
+void OBD::ShowTreeNode(Tree::Node* ptrNode)
 {
     if (ptrNode != nullptr)
     {
