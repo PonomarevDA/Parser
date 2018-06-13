@@ -50,10 +50,15 @@ public:
         uint8_t FormulaLength;
         uint8_t Formula[32];
         Tree tree;
+		uint8_t DataBytes[4];
     };
     void Init();						// »нициализаци€ протокола: построение дерева
     void Do();
 protected:
+	enum
+	{
+		MAX_NUMBER_OF_DATA_BYTES = 4,
+	};
     // ћетод инициализации:
     void CreateTrees();					// ѕостроить дерево синтаксического разбора
 

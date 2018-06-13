@@ -53,14 +53,20 @@ void OBD::CreateTrees()
 {
 	for (uint8_t paramCount = 0; paramCount < ParamNumber; paramCount++)
 	{
-		for (uint8_t count = ParamTable[paramCount].FormulaLength; count >= 1;)
+		uint8_t dataByteCount = 0;
+		memset(ParamTable[paramCount].DataBytes, 0x55, 4);
+		for (uint8_t count = ParamTable[paramCount].FormulaLength; count > 1;)
 		{
 			uint8_t byte = ParamTable[paramCount].Formula[--count];
 			// Если операнд
-			if ((byte < 0x08) || (byte >= 0x80))
+			if ( IsItOperand(byte) )
 			{
 				Tree::Node* op = ParamTable[paramCount].tree.AddNodeLower(byte);
 				buf.Push(op);
+				if ( IsItDataFrame(byte) && (dataByteCount < MAX_NUMBER_OF_DATA_BYTES) &&
+					(byte != ParamTable[paramCount].DataBytes[0]) && (ParamTable[paramCount].DataBytes[1]) &&
+					(byte != ParamTable[paramCount].DataBytes[2]) && (ParamTable[paramCount].DataBytes[3]) )
+					ParamTable[paramCount].DataBytes[dataByteCount++] = byte;
 			}
 			// Если оператор
 			else
@@ -283,21 +289,48 @@ uint8_t OBD::DoReverseCalculateWithBruteForce(int64_t needValue)
         OK = 0,
         ERROR = 1,
     };
-    for (uint16_t d0 = 0; d0 < 256; d0++)
+	uint8_t indexByte0 = ParamTable[ParamCount].DataBytes[0];
+	uint8_t indexByte1 = ParamTable[ParamCount].DataBytes[1];
+	uint8_t indexByte2 = ParamTable[ParamCount].DataBytes[2];
+	uint8_t indexByte3 = ParamTable[ParamCount].DataBytes[3];
+	uint16_t valueByte0 = ( IsItDataFrame(indexByte0) ) ? 0 : 255;
+	uint16_t valueByte1 = ( IsItDataFrame(indexByte1) ) ? 0 : 255;
+	uint16_t valueByte2 = ( IsItDataFrame(indexByte2) ) ? 0 : 255;
+	uint16_t valueByte3 = ( IsItDataFrame(indexByte3) ) ? 0 : 255;
+    while (valueByte3 < 256)
     {
-        for (uint16_t d1 = 0; d1 < 256; d1++)
+		frame.Data[indexByte3] = (uint8_t)valueByte3;
+		while (valueByte2 < 256)
         {
-            for (uint16_t d2 = 0; d2 < 256; d2++)
+			frame.Data[indexByte2] = (uint8_t)valueByte2;
+			while (valueByte1 < 256)
             {
-                frame.Data[0] = (uint8_t)d0; frame.Data[1] = (uint8_t)d1; frame.Data[2] = (uint8_t)d2;
-                DoDirectCalculate();
-                if (Value == needValue)
-                {
-                    return OK;
-                }
+				frame.Data[indexByte1] = (uint8_t)valueByte1;
+				while (valueByte0 < 256)
+				{
+					frame.Data[indexByte0] = (uint8_t)valueByte0;
+					DoDirectCalculate();
+					if (Value == needValue)
+						return OK;
+					valueByte0++;
+				}
+				valueByte0 = 0;
+				valueByte1++;
             }
+			valueByte1 = 0;
+			valueByte2++;
         }
+		valueByte2 = 0;
+		valueByte3++;
     }
+	if( IsItDataFrame(indexByte3) )
+		frame.Data[indexByte3] = 0;
+	if (IsItDataFrame(indexByte2))
+		frame.Data[indexByte2] = 0;
+	if (IsItDataFrame(indexByte1))
+		frame.Data[indexByte1] = 0;
+	if (IsItDataFrame(indexByte0))
+		frame.Data[indexByte0] = 0;
     return ERROR;
 }
 
@@ -316,11 +349,46 @@ uint8_t OBD::DoReverseCalculateWithMethodDichotomy(int64_t NeedValue)
         ERROR = 1,
     };
     uint32_t dataMinBorder = 0;
-    uint32_t dataMaxBorder = 16777215;
-    uint32_t dataGuess = 8388608;
-    frame.Data[0] = dataGuess % 256;
-    frame.Data[1] = (dataGuess >> 8) % 256;
-    frame.Data[2] = (dataGuess >> 16) % 256;
+    uint32_t dataMaxBorder;
+    uint32_t dataGuess;
+	uint8_t counter = 0;
+	uint8_t indexByte0 = ParamTable[ParamCount].DataBytes[0];
+	uint8_t indexByte1 = ParamTable[ParamCount].DataBytes[1];
+	uint8_t indexByte2 = ParamTable[ParamCount].DataBytes[2];
+	uint8_t indexByte3 = ParamTable[ParamCount].DataBytes[3];
+	if (IsItDataFrame(indexByte3))
+	{
+		dataMaxBorder = 4294967295;
+		dataGuess = 2147483648;
+		frame.Data[indexByte3] = (dataGuess >> 24) % 256;
+		frame.Data[indexByte2] = (dataGuess >> 16) % 256;
+		frame.Data[indexByte1] = (dataGuess >> 8) % 256;
+		frame.Data[indexByte0] = dataGuess % 256;
+	}
+	else if (IsItDataFrame(indexByte2))
+	{
+		dataMaxBorder = 16777215;
+		dataGuess = 8388608;
+		frame.Data[indexByte2] = (dataGuess >> 16) % 256;
+		frame.Data[indexByte1] = (dataGuess >> 8) % 256;
+		frame.Data[indexByte0] = dataGuess % 256;
+	}
+	else if (IsItDataFrame(indexByte1))
+	{
+		dataMaxBorder = 65535;
+		dataGuess = 32769;
+		frame.Data[indexByte1] = (dataGuess >> 8) % 256;
+		frame.Data[indexByte0] = dataGuess % 256;
+	}
+	else if (IsItDataFrame(indexByte0))
+	{
+		dataMaxBorder = 255;
+		dataGuess = 128;
+		frame.Data[indexByte0] = dataGuess;
+	}
+	
+	
+	
     DoDirectCalculate();
     while (Value != NeedValue)
     {
@@ -336,10 +404,20 @@ uint8_t OBD::DoReverseCalculateWithMethodDichotomy(int64_t NeedValue)
             dataMinBorder = dataGuess;
             dataGuess = ((dataMaxBorder + dataMinBorder) >> 1) + 1;	// округляем в большую сторону
         }
-        frame.Data[0] = dataGuess % 256;
-        frame.Data[1] = (dataGuess >> 8) % 256;
-        frame.Data[2] = (dataGuess >> 16) % 256;
+        frame.Data[indexByte0] = dataGuess % 256;
+        frame.Data[indexByte1] = (dataGuess >> 8) % 256;
+        frame.Data[indexByte2] = (dataGuess >> 16) % 256;
+		frame.Data[indexByte3] = (dataGuess >> 24) % 256;
         DoDirectCalculate();
+		if ((counter++) > 32)
+		{ 
+			frame.Data[indexByte0] = 0;
+			frame.Data[indexByte1] = 0;
+			frame.Data[indexByte2] = 0;
+			frame.Data[indexByte3] = 0;
+			return ERROR;
+		}
+			
     }
     return OK;
 }
@@ -508,26 +586,28 @@ void OBD::ShowFormula()
 */
 void OBD::ShowByte(uint8_t byte)
 {
-    if(byte < 0x08)
-        std::cout << "d" << byte + 0 << " ";
-    else if(byte >= 0x80)
-        std::cout << byte - 0x80 << " ";
-    else if(byte == OPCODE_ADD)
-        std::cout << "+ ";
-    else if(byte == OPCODE_SUB)
-        std::cout << "- ";
-    else if(byte == OPCODE_DIV)
-        std::cout << "/ ";
-    else if(byte == OPCODE_MUL)
-        std::cout << "* ";
-    else if(byte == OPCODE_BIT_AND)
-        std::cout << "& ";
-    else if(byte == OPCODE_BIT_OR)
-        std::cout << "| ";
-    else if(byte == OPCODE_SHIFT_LEFT)
-        std::cout << "<< ";
-    else if(byte == OPCODE_SHIFT_RIGHT)
-        std::cout << ">> ";
+	if (byte < 0x08)						std::cout << "d" << byte + 0 << " ";
+	else if (byte >= 0x80)					std::cout << byte - 0x80 << " ";
+	else if (byte == OPCODE_LOG_OR)			std::cout << "|| ";
+	else if (byte == OPCODE_LOG_AND)		std::cout << "&& ";
+	else if (byte == OPCODE_LOG_NOT)		std::cout << "! ";
+	else if (byte == OPCODE_BIT_NOT)		std::cout << "~ ";
+	else if (byte == OPCODE_BIT_OR)			std::cout << "| ";
+	else if (byte == OPCODE_BIT_XOR)		std::cout << "^ ";
+	else if (byte == OPCODE_BIT_AND)		std::cout << "& ";
+	else if (byte == OPCODE_EQU)			std::cout << "== ";
+	else if (byte == OPCODE_NEQU)			std::cout << "<> ";
+	else if (byte == OPCODE_LESS)			std::cout << "< ";
+	else if (byte == OPCODE_MORE)			std::cout << "> ";
+	else if (byte == OPCODE_LESS_EQU)		std::cout << "<= ";
+	else if (byte == OPCODE_MORE_EQU)		std::cout << ">= ";
+	else if (byte == OPCODE_SHIFT_LEFT)		std::cout << "<< ";
+	else if (byte == OPCODE_SHIFT_RIGHT)	std::cout << ">> ";
+    else if (byte == OPCODE_ADD)			std::cout << "+ ";
+    else if (byte == OPCODE_SUB)			std::cout << "- ";
+	else if (byte == OPCODE_MUL)			std::cout << "* ";
+    else if (byte == OPCODE_DIV)			std::cout << "/ ";
+	else if (byte == OPCODE_IF_ELSE)		std::cout << "IF-ELSE ";
     else
         std::cout << "? ";
 }
