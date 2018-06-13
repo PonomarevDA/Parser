@@ -28,10 +28,10 @@ inline uint8_t IsItOperand(uint8_t byte)
 */
 void OBD::Init()
 {
-    ParamCount = 1;
+	ParamNumber = 1;
     Value = 0;
 
-    uint8_t paramNumber = 0;
+    uint8_t paramCount = 0;
     /*
     ParamTable[0].flength = 32;
     uint8_t arr[32] = {0x01, 0x1B, 0x1B, 0x18, 0x1A, 0x18, 0x1A, 0x19,
@@ -39,65 +39,66 @@ void OBD::Init()
                        0x0F, 0x03, 0xFF, 0x88, 0x02, 0x1A, 0x1A, 0x1A,
                        0x17, 0x03, 0x87, 0xA0, 0xA0, 0xA0, 0xA8, 0x99};
     */
-    ParamTable[0].FormulaLength = 12;
+    ParamTable[paramCount].FormulaLength = 12;
     uint8_t arr[12] = { 0x01, 0x1A, 0x0D, 0x0D, 0x16, 0x02, 0x90, 0x16, 0x01, 0x88, 0x00, 0x8A};
-    memcpy(ParamTable[paramNumber].Formula, arr, ParamTable[paramNumber].FormulaLength);
-    CreateTree();
+    memcpy(ParamTable[paramCount].Formula, arr, ParamTable[paramCount].FormulaLength);
+	CreateTrees();
 }
 
 
 /*
 * @brief Построение дерева синтаксического разбора формулы
 */
-void OBD::CreateTree()
+void OBD::CreateTrees()
 {
-    const uint8_t paramNumber = 0;
+	for (uint8_t paramCount = 0; paramCount < ParamNumber; paramCount++)
+	{
+		for (uint8_t count = ParamTable[paramCount].FormulaLength; count >= 1;)
+		{
+			uint8_t byte = ParamTable[paramCount].Formula[--count];
+			// Если операнд
+			if ((byte < 0x08) || (byte >= 0x80))
+			{
+				Tree::Node* op = ParamTable[paramCount].tree.AddNodeLower(byte);
+				buf.Push(op);
+			}
+			// Если оператор
+			else
+			{
+				// Если унарный оператор <=> 1 наследник
+				if ((byte == OPCODE_LOG_NOT) || (byte == OPCODE_BIT_NOT))
+				{
+					uint8_t length = 1;
+					Tree::Node** ops = new Tree::Node*[length];
+					ops[0] = buf.Pop();
+					Tree::Node* op = ParamTable[paramCount].tree.AddNodeParent(byte, ops, length);
+					buf.Push(op);
+				}
+				// Если бинарный оператор <=> 2 наследника
+				else if ((byte == OPCODE_LOG_OR) || (byte == OPCODE_LOG_AND) || ((byte >= OPCODE_BIT_OR) && (byte <= OPCODE_DIV)))
+				{
+					uint8_t length = 2;
+					Tree::Node** ops = new Tree::Node*[length];
+					ops[0] = buf.Pop();
+					ops[1] = buf.Pop();
+					Tree::Node* op = ParamTable[paramCount].tree.AddNodeParent(byte, ops, length);
+					buf.Push(op);
+				}
+				// Если тернарный оператор <=> 3 наследника
+				else if (byte == OPCODE_IF_ELSE)
+				{
+					uint8_t length = 3;
+					Tree::Node** ops = new Tree::Node*[length];
+					ops[0] = buf.Pop();
+					ops[1] = buf.Pop();
+					ops[2] = buf.Pop();
+					Tree::Node* op = ParamTable[paramCount].tree.AddNodeParent(byte, ops, length);
+					buf.Push(op);
+				}
 
-    for (uint8_t count = ParamTable[paramNumber].FormulaLength; count >= 1;)
-    {
-        uint8_t byte = ParamTable[paramNumber].Formula[--count];
-        // Если операнд
-        if ((byte < 0x08) || (byte >= 0x80))
-        {
-            Tree::Node* op = ParamTable[paramNumber].tree.AddNodeLower(byte);
-            buf.Push(op);
-        }
-        // Если оператор
-        else
-        {
-            // Если унарный оператор <=> 1 наследник
-            if ( (byte == OPCODE_LOG_NOT) || (byte == OPCODE_BIT_NOT) )
-            {
-                uint8_t length = 1;
-                Tree::Node** ops = new Tree::Node*[length];
-                ops[0] = buf.Pop();
-                Tree::Node* op = ParamTable[paramNumber].tree.AddNodeParent(byte, ops, length);
-                buf.Push(op);
-            }
-            // Если бинарный оператор <=> 2 наследника
-            else if ( (byte == OPCODE_LOG_OR) || (byte == OPCODE_LOG_AND) || ((byte >= OPCODE_BIT_OR)&&(byte <= OPCODE_DIV)) )
-            {
-                uint8_t length = 2;
-                Tree::Node** ops = new Tree::Node*[length];
-                ops[0] = buf.Pop();
-                ops[1] = buf.Pop();
-                Tree::Node* op = ParamTable[paramNumber].tree.AddNodeParent(byte, ops, length);
-                buf.Push(op);
-            }
-            // Если тернарный оператор <=> 3 наследника
-            else if (byte == OPCODE_IF_ELSE)
-            {
-                uint8_t length = 3;
-                Tree::Node** ops = new Tree::Node*[length];
-                ops[0] = buf.Pop();
-                ops[1] = buf.Pop();
-                ops[2] = buf.Pop();
-                Tree::Node* op = ParamTable[paramNumber].tree.AddNodeParent(byte, ops, length);
-                buf.Push(op);
-            }
-
-        }
-    }
+			}
+		}
+	}
 }
 
 
@@ -107,7 +108,7 @@ void OBD::CreateTree()
 */
 void OBD::DoDirectCalculate()
 {
-    uint8_t param = 0;
+    uint8_t param = ParamCount;
     uint8_t operators[16];
     uint32_t operands[16];
     int8_t operatorIndex = -1;
@@ -184,7 +185,7 @@ uint32_t OBD::DoReverseCalculateWithTree(uint32_t value, Tree::Node* node)
         BASE_IS_NULL = 2,
         UNEXPECTED_ERROR = 255,
     };
-    Tree::Node* base = ParamTable->tree.GetBaseNode();
+    Tree::Node* base = ParamTable[ParamCount].tree.GetBaseNode();
     static uint8_t status = OK;
 
     // 0. Check correctness:
@@ -492,13 +493,11 @@ uint32_t OBD::CalculateReverseElementary(uint32_t value, uint8_t opcode, uint32_
 */
 void OBD::ShowFormula()
 {
-    const uint8_t paramNumber = 0;
-    std::cout << "Formula[0]:" << std::endl;
-    std::cout << "Length = ";
-    std::cout << ParamTable[paramNumber].FormulaLength + 0 << std::endl;
-    for(uint8_t count = 1; count < ParamTable[paramNumber].FormulaLength; count++)
+    std::cout << "\nFormula[" << ParamCount + 0 << "]: " << std::endl;
+    std::cout << "Length = " << ParamTable[ParamCount].FormulaLength + 0 << std::endl;
+    for(uint8_t countOfByte = 1; countOfByte < ParamTable[ParamCount].FormulaLength; countOfByte++)
     {
-        uint8_t byte = ParamTable[paramNumber].Formula[count];
+        uint8_t byte = ParamTable[ParamCount].Formula[countOfByte];
         ShowByte(byte);
     }
 }
@@ -539,8 +538,7 @@ void OBD::ShowByte(uint8_t byte)
 */
 void OBD::ShowTree()
 {
-    const uint8_t paramNumber = 0;
-    Tree::Node* ptrNode = ParamTable[paramNumber].tree.GetBaseNode();
+    Tree::Node* ptrNode = ParamTable[ParamCount].tree.GetBaseNode();
     std::cout << std::endl << "Tree:" << std::endl;
     if (ptrNode != nullptr)
     {
@@ -558,13 +556,13 @@ void OBD::ShowTreeNode(Tree::Node* ptrNode)
 {
     if (ptrNode != nullptr)
     {
-        if ((ptrNode->Value >= 0x08) && (ptrNode->Value < 0x80))
+        if ( IsItOperator(ptrNode->Value) )
         {
             ShowByte(ptrNode->Value);
             ShowTreeNode(ptrNode->ChildsArr[0]);
             ShowTreeNode(ptrNode->ChildsArr[1]);
         }
         else
-            std::cout << std::endl;
+            std::cout << "   ";
     }
 }

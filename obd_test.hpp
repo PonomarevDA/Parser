@@ -6,10 +6,8 @@
 class TestOBD: public OBD
 {
 private:
-    void CreateTreeForReverseADD();
-    void CreateTreeForReverseSUB();
-    void CreateTreeForReverseMUL();
-    void CreateTreeForReverseDIV();
+    void CreateTreesForReverseElementary();
+	void CreateTreeForAudiA3_2013();
     void CreateTreeForReverseWithDifficulties();
 public:
     void TestCalculationReverse();

@@ -5,65 +5,71 @@
 /*
 * @brief Задать формулу d0+5
 */
-void TestOBD::CreateTreeForReverseADD()
+void TestOBD::CreateTreesForReverseElementary()
 {
-    const uint8_t paramNumber = 0;
-    ParamTable[0].FormulaLength = 4;
-    uint8_t arr[4] = { 0x01, 0x18, 0x00, 0x85 };
-    memcpy(ParamTable[paramNumber].Formula, arr, ParamTable[paramNumber].FormulaLength);
-    CreateTree();
+	ParamNumber = 0;
+	ParamCount = 0;
+	{// ADD	
+		ParamTable[ParamNumber].FormulaLength = 4;
+		uint8_t arr[4] = { 0x01, 0x18, 0x00, 0x85 };
+		memcpy(ParamTable[ParamNumber].Formula, arr, ParamTable[ParamNumber].FormulaLength);
+		ParamNumber++;
+	}
+	{// SUB	
+		ParamTable[ParamNumber].FormulaLength = 4;
+		uint8_t arr[4] = { 0x01, 0x19, 0x00, 0x85 };
+		memcpy(ParamTable[ParamNumber].Formula, arr, ParamTable[ParamNumber].FormulaLength);
+		ParamNumber++;
+	}
+	{// MUL
+		ParamTable[ParamNumber].FormulaLength = 4;
+		uint8_t arr[4] = { 0x01, 0x1A, 0x00, 0x85 };
+		memcpy(ParamTable[ParamNumber].Formula, arr, ParamTable[ParamNumber].FormulaLength);
+		ParamNumber++;
+	}
+	{// DIV
+		ParamTable[ParamNumber].FormulaLength = 4;
+		uint8_t arr[4] = { 0x01, 0x1B, 0x00, 0x85 };
+		memcpy(ParamTable[ParamNumber].Formula, arr, ParamTable[ParamNumber].FormulaLength);
+		ParamNumber++;
+	}
+	CreateTrees();
 }
 
 
 /*
-* @brief Задать формулу d0-5
-*/
-void TestOBD::CreateTreeForReverseSUB()
-{
-    const uint8_t paramNumber = 0;
-    ParamTable[0].FormulaLength = 4;
-    uint8_t arr[4] = { 0x01, 0x19, 0x00, 0x85 };
-    memcpy(ParamTable[paramNumber].Formula, arr, ParamTable[paramNumber].FormulaLength);
-    CreateTree();
-}
-
-
-/*
-* @brief Задать формулу d0*5
-*/
-void TestOBD::CreateTreeForReverseMUL()
-{
-    const uint8_t paramNumber = 0;
-    ParamTable[0].FormulaLength = 4;
-    uint8_t arr[4] = { 0x01, 0x1A, 0x00, 0x85 };
-    memcpy(ParamTable[paramNumber].Formula, arr, ParamTable[paramNumber].FormulaLength);
-    CreateTree();
-}
-
-
-/*
-* @brief Задать формулу d0/5
-*/
-void TestOBD::CreateTreeForReverseDIV()
-{
-    const uint8_t paramNumber = 0;
-    ParamTable[0].FormulaLength = 4;
-    uint8_t arr[4] = { 0x01, 0x1B, 0x00, 0x85 };
-    memcpy(ParamTable[paramNumber].Formula, arr, ParamTable[paramNumber].FormulaLength);
-    CreateTree();
-}
-
-
-/*
-* @brief Задать формулу d0/5
+* @brief Задать формулу (d0 | (d1 << 8) | (d2 << 16) ) * 10
 */
 void TestOBD::CreateTreeForReverseWithDifficulties()
 {
-    const uint8_t paramNumber = 0;
-    ParamTable[0].FormulaLength = 12;
-    uint8_t arr[12] = { 0x01, 0x1A, 0x0D, 0x0D, 0x16, 0x02, 0x90, 0x16, 0x01, 0x88, 0x00, 0x8A };
-    memcpy(ParamTable[paramNumber].Formula, arr, ParamTable[paramNumber].FormulaLength);
-    CreateTree();
+	ParamNumber = 0;
+	ParamCount = 0;
+	{
+		ParamTable[ParamNumber].FormulaLength = 12;
+		uint8_t arr[12] = { 0x01, 0x1A, 0x0D, 0x0D, 0x16, 0x02, 0x90, 0x16, 0x01, 0x88, 0x00, 0x8A };
+		memcpy(ParamTable[ParamNumber].Formula, arr, ParamTable[ParamNumber].FormulaLength);
+		ParamNumber++;
+	}
+    
+	CreateTrees();
+}
+
+
+/*
+* @brief Задать формулы для Audi A3 2013
+*/
+void TestOBD::CreateTreeForAudiA3_2013()
+{
+	ParamNumber = 0;
+	ParamCount = 0;
+	{
+		ParamTable[ParamNumber].FormulaLength = 6;
+		uint8_t arr[12] = { 0x01, 0x10, 0x0F, 0x04, 0x81, 0x00 };
+		memcpy(ParamTable[ParamNumber].Formula, arr, ParamTable[ParamNumber].FormulaLength);
+		ParamNumber++;
+	}
+
+	CreateTrees();
 }
 
 
@@ -73,34 +79,42 @@ void TestOBD::CreateTreeForReverseWithDifficulties()
 */
 void TestOBD::TestCalculationReverse()
 {
-    (*this).CreateTreeForReverseWithDifficulties();
-    ShowFormula();
-    ShowTree();
-    int64_t NeedValue = 5000;
+	// Инициализация
+    (*this).CreateTreeForAudiA3_2013();
 
-    std::cout << "\n\nReverse calculation (brut force):";
-    std::cout << "\nValue: " << NeedValue << "\n";
-    std::cout << "Frame: ";
-    memset(frame.Data, 0, 8);
-    DoReverseCalculateWithBruteForce(NeedValue);
-    for (uint8_t count = 0; count < 8; count++)
-        std::cout << frame.Data[count] + 0 << " ";
+	// Вывод данных в терминал
+    int64_t NeedValue = 1;
 
-    std::cout << "\n\nReverse calculation (tree):";
-    std::cout << "\nValue: " << NeedValue << "\n";
-    std::cout << "Frame: ";
-    memset(frame.Data, 0, 8);
-    DoReverseCalculateWithTree(NeedValue);
-    for (uint8_t count = 0; count < 8; count++)
-        std::cout << frame.Data[count] + 0 << " ";
+	for (ParamCount = 0; ParamCount < ParamNumber; ParamCount++)
+	{
+		ShowFormula();
+		ShowTree();
 
-    std::cout << "\n\nReverse calculation (method dichotomy) [work only with d0,d1,d2,d3]:";
-    std::cout << "\nValue: " << NeedValue << "\n";
-    std::cout << "Frame: ";
-    memset(frame.Data, 0, 8);
-    DoReverseCalculateWithMethodDichotomy(NeedValue);
-    for (uint8_t count = 0; count < 8; count++)
-        std::cout << frame.Data[count] + 0 << " ";
+		std::cout << "\n\nReverse calculation (brut force):";
+		std::cout << "\nValue: " << NeedValue << "\n";
+		std::cout << "Frame: ";
+		memset(frame.Data, 0, 8);
+		DoReverseCalculateWithBruteForce(NeedValue);
+		for (uint8_t count = 0; count < 8; count++)
+			std::cout << frame.Data[count] + 0 << " ";
+
+		std::cout << "\n\nReverse calculation (tree):";
+		std::cout << "\nValue: " << NeedValue << "\n";
+		std::cout << "Frame: ";
+		memset(frame.Data, 0, 8);
+		DoReverseCalculateWithTree(NeedValue);
+		for (uint8_t count = 0; count < 8; count++)
+			std::cout << frame.Data[count] + 0 << " ";
+
+		std::cout << "\n\nReverse calculation (method dichotomy) [work only with d0,d1,d2,d3]:";
+		std::cout << "\nValue: " << NeedValue << "\n";
+		std::cout << "Frame: ";
+		memset(frame.Data, 0, 8);
+		DoReverseCalculateWithMethodDichotomy(NeedValue);
+		for (uint8_t count = 0; count < 8; count++)
+			std::cout << frame.Data[count] + 0 << " ";
+		std::cout << "\n\n\n\n";
+	}
 }
 
 /*

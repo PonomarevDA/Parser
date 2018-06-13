@@ -55,7 +55,7 @@ public:
     void Do();
 protected:
     // Метод инициализации:
-    void CreateTree();					// Построить дерево синтаксического разбора
+    void CreateTrees();					// Построить дерево синтаксического разбора
 
     // Методы выполнения алгоритма прямого/обратного расчета:
     void DoDirectCalculate();
@@ -73,8 +73,9 @@ protected:
 
     // Global and static variables:
     Stack buf;
-    ParamTable_t ParamTable[1];
-    uint8_t ParamCount = 1;
+    ParamTable_t ParamTable[9];
+    uint8_t ParamNumber;
+	uint8_t ParamCount;
     Frame frame;
     uint32_t Value = 0;
 };
