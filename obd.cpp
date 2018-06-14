@@ -2,26 +2,6 @@
 #include "cstring"  // для memcpy
 #include <iostream>
 
-inline uint8_t IsItDataFrame(uint8_t byte)
-{
-    return (byte < 0x08)?1:0;
-}
-
-inline uint8_t IsItConst(uint8_t byte)
-{
-    return (byte >= 0x80)?1:0;
-}
-
-inline uint8_t IsItOperator(uint8_t byte)
-{
-    return ( (byte >= 0x08) && (byte < 0x80) )?1:0;
-}
-
-inline uint8_t IsItOperand(uint8_t byte)
-{
-    return ( (byte < 0x08) || (byte >= 0x80) )?1:0;
-}
-
 
 /*
 * @brief Имитация инициализации тестового стенда
@@ -572,82 +552,44 @@ uint32_t OBD::CalculateReverseElementary(uint32_t value, uint8_t opcode, uint32_
 
 
 /*
-* @brief Выводит в терминал формулу, полученную из конфигуратора
+* @brief Определяет, является ли данный байт байтом данных фрейма
+* @param byte - байт для рассмотрения
+* @return 1 - является, 0 - нет 
 */
-void OBD::ShowFormula()
+uint8_t OBD::IsItDataFrame(uint8_t byte)
 {
-    std::cout << "\nFormula[" << ParamCount + 0 << "]: " << std::endl;
-    std::cout << "Length = " << ParamTable[ParamCount].FormulaLength + 0 << std::endl;
-    for(uint8_t countOfByte = 1; countOfByte < ParamTable[ParamCount].FormulaLength; countOfByte++)
-    {
-        uint8_t byte = ParamTable[ParamCount].Formula[countOfByte];
-        ShowByte(byte);
-    }
+	return (byte < 0x08) ? 1 : 0;
 }
 
 
 /*
-* @brief Выводит в терминал распарсенный байт формулы
+* @brief Определяет, является ли данный байт константой
+* @param byte - байт для рассмотрения
+* @return 1 - является, 0 - нет
 */
-void OBD::ShowByte(uint8_t byte)
+uint8_t OBD::IsItConst(uint8_t byte)
 {
-	if (byte < 0x08)						std::cout << "d" << byte + 0 << " ";
-	else if (byte >= 0x80)					std::cout << byte - 0x80 << " ";
-	else if (byte == OPCODE_LOG_OR)			std::cout << "|| ";
-	else if (byte == OPCODE_LOG_AND)		std::cout << "&& ";
-	else if (byte == OPCODE_LOG_NOT)		std::cout << "! ";
-	else if (byte == OPCODE_BIT_NOT)		std::cout << "~ ";
-	else if (byte == OPCODE_BIT_OR)			std::cout << "| ";
-	else if (byte == OPCODE_BIT_XOR)		std::cout << "^ ";
-	else if (byte == OPCODE_BIT_AND)		std::cout << "& ";
-	else if (byte == OPCODE_EQU)			std::cout << "== ";
-	else if (byte == OPCODE_NEQU)			std::cout << "<> ";
-	else if (byte == OPCODE_LESS)			std::cout << "< ";
-	else if (byte == OPCODE_MORE)			std::cout << "> ";
-	else if (byte == OPCODE_LESS_EQU)		std::cout << "<= ";
-	else if (byte == OPCODE_MORE_EQU)		std::cout << ">= ";
-	else if (byte == OPCODE_SHIFT_LEFT)		std::cout << "<< ";
-	else if (byte == OPCODE_SHIFT_RIGHT)	std::cout << ">> ";
-    else if (byte == OPCODE_ADD)			std::cout << "+ ";
-    else if (byte == OPCODE_SUB)			std::cout << "- ";
-	else if (byte == OPCODE_MUL)			std::cout << "* ";
-    else if (byte == OPCODE_DIV)			std::cout << "/ ";
-	else if (byte == OPCODE_IF_ELSE)		std::cout << "IF-ELSE ";
-    else
-        std::cout << "? ";
+	return (byte >= 0x80) ? 1 : 0;
 }
 
 
 /*
-* @brief Выводит в терминал операторы дерева, начиная с верхнего узла, если возможно
+* @brief Определяет, является ли данный байт оператором
+* @param byte - байт для рассмотрения
+* @return 1 - является, 0 - нет
 */
-void OBD::ShowTree()
+uint8_t OBD::IsItOperator(uint8_t byte)
 {
-    Tree::Node* ptrNode = ParamTable[ParamCount].tree.GetBaseNode();
-    std::cout << std::endl << "Tree:" << std::endl;
-    if (ptrNode != nullptr)
-    {
-        ShowTreeNode(ptrNode);
-    }
-    else
-        std::cout <<std::endl << "Tree is empty";
+	return ((byte >= 0x08) && (byte < 0x80)) ? 1 : 0;
 }
 
 
 /*
-* @brief Рекурсивно выводит в терминал операторы дерева
+* @brief Определяет, является ли данный байт операндом
+* @param byte - байт для рассмотрения
+* @return 1 - является, 0 - нет
 */
-void OBD::ShowTreeNode(Tree::Node* ptrNode)
+uint8_t OBD::IsItOperand(uint8_t byte)
 {
-    if (ptrNode != nullptr)
-    {
-        if ( IsItOperator(ptrNode->Value) )
-        {
-            ShowByte(ptrNode->Value);
-            ShowTreeNode(ptrNode->ChildsArr[0]);
-            ShowTreeNode(ptrNode->ChildsArr[1]);
-        }
-        else
-            std::cout << "   ";
-    }
+	return ((byte < 0x08) || (byte >= 0x80)) ? 1 : 0;
 }

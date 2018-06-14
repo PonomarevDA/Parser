@@ -73,11 +73,11 @@ protected:
     uint32_t CalculateDirectElementary(uint8_t opcode, uint32_t operand1, uint32_t operand2 = 0, uint32_t operand3 = 0);
     uint32_t CalculateReverseElementary(uint32_t value, uint8_t opcode, uint32_t operand1, uint32_t operand2 = 0, uint32_t operand3 = 0);
 
-    /// Методы иллюстрации результатов алгоритмов в терминале:
-    void ShowFormula();
-    void ShowByte(uint8_t byte);
-    void ShowTree();
-    void ShowTreeNode(Tree::Node*);
+	/// Методы проверки типа байта
+	uint8_t IsItDataFrame(uint8_t byte);
+	uint8_t IsItConst(uint8_t byte);
+	uint8_t IsItOperator(uint8_t byte);
+	uint8_t IsItOperand(uint8_t byte);
 
     /// Variables:
     Stack buf;

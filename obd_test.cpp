@@ -80,19 +80,29 @@ void TestOBD::CreateTreeForReverseWithDifficulties()
 		memcpy(ParamTable[ParamNumber].Formula, arr, ParamTable[ParamNumber].FormulaLength);
 		ParamNumber++;
 	}
+	// "( ( ( d4 &amp; 1 ) &lt;&lt; 8 ) | d5 ) * 100 / ( 4 * 100 + 7 )"
+
+	// "( ( d4 &gt;&gt; 7 ) &amp; 1 ) &amp; ( ( ( d4 &gt;&gt; 6 ) &amp; 1 ) == 0)"
+
+	{	// "( ( d1 &amp; 3 ) == 2 ) | ( ( d1 &amp; 3 ) == 3 )"
+		ParamTable[ParamNumber].FormulaLength = 12;
+		uint8_t arr[12] = { 0x01, 0x0D, 0x10, 0x82, 0x0F, 0x01, 0x83, 0x10, 0x83, 0x0F, 0x01, 0x83 };
+		memcpy(ParamTable[ParamNumber].Formula, arr, ParamTable[ParamNumber].FormulaLength);
+		ParamNumber++;
+	}
+	{	// "( d2 == 41 ) * ( d3 / 2 ) "
+		ParamTable[ParamNumber].FormulaLength = 8;
+		uint8_t arr[8] = { 0x01, OPCODE_MUL, OPCODE_EQU, 0x02, 0xA9, OPCODE_DIV, 0x03, 0x82 };
+		memcpy(ParamTable[ParamNumber].Formula, arr, ParamTable[ParamNumber].FormulaLength);
+		ParamNumber++;
+	}
 	{	// "( d0 == 2 ) * ( ( d5 &lt;&lt; 16 ) | ( d6 &lt;&lt; 8 ) | d7 ) * 10"
 		ParamTable[ParamNumber].FormulaLength = 16;
 		uint8_t arr[16] = { 0x01, 0x1A, 0x1A, 0x10, 0x00, 0x82, 0x0D, 0x0D, 0x16, 0x05, 0x90, 0x16, 0x06, 0x88, 0x07, 0x8A };
 		memcpy(ParamTable[ParamNumber].Formula, arr, ParamTable[ParamNumber].FormulaLength);
 		ParamNumber++;
 	}
-	// "( ( ( d4 &amp; 1 ) &lt;&lt; 8 ) | d5 ) * 100 / ( 4 * 100 + 7 )"
-
-	// "( ( d1 &amp; 3 ) == 2 ) | ( ( d1 &amp; 3 ) == 3 )"
-
-	// "( ( d4 &gt;&gt; 7 ) &amp; 1 ) &amp; ( ( ( d4 &gt;&gt; 6 ) &amp; 1 ) == 0)"
-
-	// "( d2 == 41 ) * ( d3 / 2 ) "
+	
     CreateTrees();
 }
 
@@ -217,4 +227,85 @@ void TestOBD::TestCalculationReverse()
 			std::cout << "\n\n\n\n";
 		}
     }
+}
+
+/*
+* @brief ¬ыводит в терминал формулу, полученную из конфигуратора
+*/
+void TestOBD::ShowFormula()
+{
+	std::cout << "\nFormula[" << ParamCount + 0 << "]: " << std::endl;
+	std::cout << "Length = " << ParamTable[ParamCount].FormulaLength + 0 << std::endl;
+	for (uint8_t countOfByte = 1; countOfByte < ParamTable[ParamCount].FormulaLength; countOfByte++)
+	{
+		uint8_t byte = ParamTable[ParamCount].Formula[countOfByte];
+		ShowByte(byte);
+	}
+}
+
+
+/*
+* @brief ¬ыводит в терминал распарсенный байт формулы
+*/
+void TestOBD::ShowByte(uint8_t byte)
+{
+	if (byte < 0x08)						std::cout << "d" << byte + 0 << " ";
+	else if (byte >= 0x80)					std::cout << byte - 0x80 << " ";
+	else if (byte == OPCODE_LOG_OR)			std::cout << "|| ";
+	else if (byte == OPCODE_LOG_AND)		std::cout << "&& ";
+	else if (byte == OPCODE_LOG_NOT)		std::cout << "! ";
+	else if (byte == OPCODE_BIT_NOT)		std::cout << "~ ";
+	else if (byte == OPCODE_BIT_OR)			std::cout << "| ";
+	else if (byte == OPCODE_BIT_XOR)		std::cout << "^ ";
+	else if (byte == OPCODE_BIT_AND)		std::cout << "& ";
+	else if (byte == OPCODE_EQU)			std::cout << "== ";
+	else if (byte == OPCODE_NEQU)			std::cout << "<> ";
+	else if (byte == OPCODE_LESS)			std::cout << "< ";
+	else if (byte == OPCODE_MORE)			std::cout << "> ";
+	else if (byte == OPCODE_LESS_EQU)		std::cout << "<= ";
+	else if (byte == OPCODE_MORE_EQU)		std::cout << ">= ";
+	else if (byte == OPCODE_SHIFT_LEFT)		std::cout << "<< ";
+	else if (byte == OPCODE_SHIFT_RIGHT)	std::cout << ">> ";
+	else if (byte == OPCODE_ADD)			std::cout << "+ ";
+	else if (byte == OPCODE_SUB)			std::cout << "- ";
+	else if (byte == OPCODE_MUL)			std::cout << "* ";
+	else if (byte == OPCODE_DIV)			std::cout << "/ ";
+	else if (byte == OPCODE_IF_ELSE)		std::cout << "IF-ELSE ";
+	else
+		std::cout << "? ";
+}
+
+
+/*
+* @brief ¬ыводит в терминал операторы дерева, начина€ с верхнего узла, если возможно
+*/
+void TestOBD::ShowTree()
+{
+	Tree::Node* ptrNode = ParamTable[ParamCount].tree.GetBaseNode();
+	std::cout << std::endl << "Tree:" << std::endl;
+	if (ptrNode != nullptr)
+	{
+		ShowTreeNode(ptrNode);
+	}
+	else
+		std::cout << std::endl << "Tree is empty";
+}
+
+
+/*
+* @brief –екурсивно выводит в терминал операторы дерева
+*/
+void TestOBD::ShowTreeNode(Tree::Node* ptrNode)
+{
+	if (ptrNode != nullptr)
+	{
+		if (IsItOperator(ptrNode->Value))
+		{
+			ShowByte(ptrNode->Value);
+			ShowTreeNode(ptrNode->ChildsArr[0]);
+			ShowTreeNode(ptrNode->ChildsArr[1]);
+		}
+		else
+			std::cout << "   ";
+	}
 }
