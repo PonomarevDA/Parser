@@ -85,6 +85,6 @@ protected:
     uint8_t ParamNumber;
 	uint8_t ParamCount;
     Frame frame;
-    uint32_t Value = 0;
+    uint32_t Value;
 };
 #endif // __OBD

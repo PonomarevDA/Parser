@@ -9,7 +9,7 @@ void TestOBD::CreateTreesForReverseElementary()
 {
     ParamNumber = 0;
     ParamCount = 0;
-    {// ADD
+    {// LOG_OR
         ParamTable[ParamNumber].FormulaLength = 4;
         uint8_t arr[4] = { 0x01, OPCODE_LOG_OR, 0x00, 0x85 };
         memcpy(ParamTable[ParamNumber].Formula, arr, ParamTable[ParamNumber].FormulaLength);
@@ -56,6 +56,12 @@ void TestOBD::CreateTreeForReverseWithDifficulties()
         memcpy(ParamTable[ParamNumber].Formula, arr, ParamTable[ParamNumber].FormulaLength);
         ParamNumber++;
     }
+	{	// "( ( d1 &gt;&gt; 4 ) &amp; 1 ) || ( ( d1 &gt;&gt; 5 ) &amp; 1 )"
+		ParamTable[ParamNumber].FormulaLength = 12;
+		uint8_t arr[12] = { 0x01, 0x09, 0x0F, 0x81, 0x17, 0x01, 0x84, 0x0F, 0x81, 0x17, 0x01, 0x85 };
+		memcpy(ParamTable[ParamNumber].Formula, arr, ParamTable[ParamNumber].FormulaLength);
+		ParamNumber++;
+	}
 	{	// "( ( ( d2 &amp; 15 ) &lt;&lt; 16 ) | ( d1 &lt;&lt; 8 ) | d0 ) * 10"
 		ParamTable[ParamNumber].FormulaLength = 14;
 		uint8_t arr[14] = { 0x01, 0x1A, 0x0D, 0x0D, 0x16, 0x0F, 0x02, 0x8F, 0x90, 0x16, 0x01, 0x88, 0x00, 0x8A };
