@@ -244,8 +244,12 @@ uint32_t OBD::DoReverseCalculateWithTree(uint32_t value, Tree::Node* node)
 
         // Оба потомка - константы
         if ( IsItConst(operand1) && IsItConst(operand2) )
-            value = CalculateDirectElementary(node->Value, operand1, operand2);
-
+		{ 
+			operand1 -= 0x80;
+			operand2 -= 0x80;
+			value = CalculateDirectElementary(node->Value, operand1, operand2);
+		}
+            
         // Хотя бы один из потомков - операнд
         else if ( IsItOperand(operand1) || IsItOperand(operand2) )
         {
@@ -256,6 +260,7 @@ uint32_t OBD::DoReverseCalculateWithTree(uint32_t value, Tree::Node* node)
                 value = DoReverseCalculateWithTree(value, node->ChildsArr[1]);
         }
 
+		// Оба потомка - операторы
         else if ( IsItOperator(operand1) && IsItOperator(operand2) )
         {
             operand1 = DoReverseCalculateWithTree(value, node->ChildsArr[0]);
@@ -386,9 +391,8 @@ uint8_t OBD::DoReverseCalculateWithMethodDichotomy(int64_t NeedValue)
 		dataGuess = 128;
 		frame.Data[indexByte0] = dataGuess;
 	}
-	
-	
-	
+	else
+		return ERROR;
     DoDirectCalculate();
     while (Value != NeedValue)
     {
@@ -491,7 +495,7 @@ uint32_t OBD::CalculateReverseElementary(uint32_t value, uint8_t opcode, uint32_
         // 2.1. Выполнение обратного элементарного расчета, если есть хотя бы одна константа
         if ( IsItConst(operand1) || IsItConst(operand2) )
         {
-            uint8_t knownConstant = ( IsItConst(operand1) )?operand1:operand2;
+            uint8_t knownConstant = ( IsItConst(operand1) )? (operand1 - 0x80) : (operand2 - 0x80);
 
             // 2.1.1. Выполнение расчета
             if (opcode == OPCODE_LOG_OR)            unknownValue = (value) ? 1 : 0;
@@ -499,25 +503,25 @@ uint32_t OBD::CalculateReverseElementary(uint32_t value, uint8_t opcode, uint32_
             else if (opcode == OPCODE_BIT_OR)       unknownValue = (value&(~knownConstant));
             else if (opcode == OPCODE_BIT_XOR)      {/*TODO*/}
             else if (opcode == OPCODE_BIT_AND)      unknownValue = (value&knownConstant);
-            else if (opcode == OPCODE_EQU)          unknownValue = (value) ? knownConstant : 0;
-            else if (opcode == OPCODE_NEQU)         unknownValue = (value) ? 0 : knownConstant;
+            else if (opcode == OPCODE_EQU)          unknownValue = (value) ? knownConstant : !knownConstant;
+            else if (opcode == OPCODE_NEQU)         unknownValue = (value) ? !knownConstant : knownConstant;
             else if (opcode == OPCODE_LESS)         {/*TODO*/}
             else if (opcode == OPCODE_MORE)         {/*TODO*/}
             else if (opcode == OPCODE_LESS_EQU)     {/*TODO*/}
             else if (opcode == OPCODE_MORE_EQU)     {/*TODO*/}
             else if (opcode == OPCODE_SHIFT_LEFT)   unknownValue = value >> knownConstant;
             else if (opcode == OPCODE_SHIFT_RIGHT)  unknownValue = value << knownConstant;
-            else if (opcode == OPCODE_ADD)          unknownValue = value - (knownConstant - 0x80);
+            else if (opcode == OPCODE_ADD)          unknownValue = value - knownConstant;
             else if (opcode == OPCODE_SUB)          // dependent
             {
-                if( IsItConst(operand2) )           unknownValue = value + (knownConstant - 0x80);
-                else                                unknownValue = (knownConstant - 0x80) - value;
+                if( IsItConst(operand2) )           unknownValue = value + knownConstant;
+                else                                unknownValue = knownConstant - value;
             }
-            else if (opcode == OPCODE_MUL)          unknownValue = value / (knownConstant - 0x80);
+            else if (opcode == OPCODE_MUL)          unknownValue = value / knownConstant;
             else if (opcode == OPCODE_DIV)          // dependent
             {
-                if( IsItConst(operand2) )           unknownValue = value * (knownConstant - 0x80);
-                else                                unknownValue = (knownConstant - 0x80) / value;
+                if( IsItConst(operand2) )           unknownValue = value * knownConstant;
+                else                                unknownValue = knownConstant / value;
             }
             else
                 return 0;
