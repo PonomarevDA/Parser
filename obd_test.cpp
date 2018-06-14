@@ -56,9 +56,19 @@ void TestOBD::CreateTreeForReverseWithDifficulties()
         memcpy(ParamTable[ParamNumber].Formula, arr, ParamTable[ParamNumber].FormulaLength);
         ParamNumber++;
     }
-	// "( ( ( d2 &amp; 15 ) &lt;&lt; 16 ) | ( d1 &lt;&lt; 8 ) | d0 ) * 10"
+	{	// "( ( ( d2 &amp; 15 ) &lt;&lt; 16 ) | ( d1 &lt;&lt; 8 ) | d0 ) * 10"
+		ParamTable[ParamNumber].FormulaLength = 14;
+		uint8_t arr[14] = { 0x01, 0x1A, 0x0D, 0x0D, 0x16, 0x0F, 0x02, 0x8F, 0x90, 0x16, 0x01, 0x88, 0x00, 0x8A };
+		memcpy(ParamTable[ParamNumber].Formula, arr, ParamTable[ParamNumber].FormulaLength);
+		ParamNumber++;
+	}
 
-	// "( 3 * d0 - 38 ) / 7"
+	{	// "( 3 * d0 - 38 ) / 7"
+		ParamTable[ParamNumber].FormulaLength = 8;
+		uint8_t arr[14] = { 0x01, OPCODE_DIV, OPCODE_SUB, OPCODE_MUL, 0x83, 0x00, 0xA6, 0x87 };
+		memcpy(ParamTable[ParamNumber].Formula, arr, ParamTable[ParamNumber].FormulaLength);
+		ParamNumber++;
+	}
 
 	// "( ( d2 &lt;&lt; 8 ) | d3 ) / ( 100 + 103 ) * 10"
 
@@ -143,14 +153,14 @@ void TestOBD::CreateTreesForAudiA3_2013()
 void TestOBD::TestCalculationReverse()
 {
     // Инициализация
-    (*this).CreateTreesForAudiA3_2013();
+    (*this).CreateTreeForReverseWithDifficulties();
 
     // Вывод данных в терминал
     int64_t needValue;
 
     for (ParamCount = 0; ParamCount < ParamNumber; ParamCount++)
     {
-		for (uint8_t countOfValue = 0; countOfValue < 3; countOfValue++)
+		for (uint8_t countOfValue = 0; countOfValue < 4; countOfValue++)
 		{
 			if (countOfValue == 0)
 				needValue = 0;
@@ -158,6 +168,8 @@ void TestOBD::TestCalculationReverse()
 				needValue = 1;
 			else if (countOfValue == 2)
 				needValue = 11;
+			else if (countOfValue == 3)
+				needValue = 40;
 			ShowFormula();
 			ShowTree();
 
