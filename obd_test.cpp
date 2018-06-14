@@ -62,20 +62,30 @@ void TestOBD::CreateTreeForReverseWithDifficulties()
 		memcpy(ParamTable[ParamNumber].Formula, arr, ParamTable[ParamNumber].FormulaLength);
 		ParamNumber++;
 	}
-
 	{	// "( 3 * d0 - 38 ) / 7"
 		ParamTable[ParamNumber].FormulaLength = 8;
-		uint8_t arr[14] = { 0x01, OPCODE_DIV, OPCODE_SUB, OPCODE_MUL, 0x83, 0x00, 0xA6, 0x87 };
+		uint8_t arr[8] = { 0x01, OPCODE_DIV, OPCODE_SUB, OPCODE_MUL, 0x83, 0x00, 0xA6, 0x87 };
 		memcpy(ParamTable[ParamNumber].Formula, arr, ParamTable[ParamNumber].FormulaLength);
 		ParamNumber++;
 	}
-
-	// "( ( d2 &lt;&lt; 8 ) | d3 ) / ( 100 + 103 ) * 10"
-
-	// "( d0 == 2 ) * ( ( d5 &lt;&lt; 16 ) | ( d6 &lt;&lt; 8 ) | d7 ) * 10"
-
-	// "( d0 == 40 ) | ( d0 == 48 )"
-
+	{	// "( ( d2 &lt;&lt; 8 ) | d3 ) / ( 100 + 103 ) * 10"
+		ParamTable[ParamNumber].FormulaLength = 12;
+		uint8_t arr[12] = { 0x01, 0x1A, 0x1B, 0x0D, 0x16, 0x02, 0x88, 0x03, 0x18, 0xE4, 0xE7, 0x8A };
+		memcpy(ParamTable[ParamNumber].Formula, arr, ParamTable[ParamNumber].FormulaLength);
+		ParamNumber++;
+	}
+	{	// "( d0 == 40 ) | ( d0 == 48 )"
+		ParamTable[ParamNumber].FormulaLength = 8;
+		uint8_t arr[8] = { 0x01, OPCODE_BIT_OR, OPCODE_EQU, 0x00, 0xA8, OPCODE_EQU, 0x00, 0xB0 };
+		memcpy(ParamTable[ParamNumber].Formula, arr, ParamTable[ParamNumber].FormulaLength);
+		ParamNumber++;
+	}
+	{	// "( d0 == 2 ) * ( ( d5 &lt;&lt; 16 ) | ( d6 &lt;&lt; 8 ) | d7 ) * 10"
+		ParamTable[ParamNumber].FormulaLength = 16;
+		uint8_t arr[16] = { 0x01, 0x1A, 0x1A, 0x10, 0x00, 0x82, 0x0D, 0x0D, 0x16, 0x05, 0x90, 0x16, 0x06, 0x88, 0x07, 0x8A };
+		memcpy(ParamTable[ParamNumber].Formula, arr, ParamTable[ParamNumber].FormulaLength);
+		ParamNumber++;
+	}
 	// "( ( ( d4 &amp; 1 ) &lt;&lt; 8 ) | d5 ) * 100 / ( 4 * 100 + 7 )"
 
 	// "( ( d1 &amp; 3 ) == 2 ) | ( ( d1 &amp; 3 ) == 3 )"
