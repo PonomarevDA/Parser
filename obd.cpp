@@ -476,19 +476,19 @@ uint32_t OBD::CalculateDirectElementary(uint8_t opcode, uint32_t operand1, uint3
 uint32_t OBD::CalculateReverseElementary(uint32_t value, uint8_t opcode, uint32_t operand1, uint32_t operand2, uint32_t operand3)
 {
     uint32_t unknownValue = 0;
-    // (+-)1. Если унарный оператор
+    /// 1. [NEED TEST'S]Если унарный оператор
     if ( (opcode == OPCODE_LOG_NOT) || (opcode == OPCODE_BIT_NOT) )
         unknownValue = CalculateDirectElementary(opcode, value);
 
-    // (+-)2. Если бинарный оператор
+    /// 2. Если бинарный оператор
     else if ( (opcode == OPCODE_LOG_OR) || (opcode == OPCODE_LOG_AND) || ( (opcode >= OPCODE_BIT_OR)&&(opcode <= OPCODE_DIV) ) )
     {
-        // 2.1. Выполнение обратного элементарного расчета, если есть хотя бы одна константа
+        /// 2.1. Выполнение обратного элементарного расчета, если есть хотя бы одна константа
         if ( IsItConst(operand1) || IsItConst(operand2) )
         {
             uint8_t knownConstant = ( IsItConst(operand1) )? (operand1 - 0x80) : (operand2 - 0x80);
 
-            // 2.1.1. Выполнение расчета
+            /// 2.1.1. Выполнение расчета
             if (opcode == OPCODE_LOG_OR)            unknownValue = (value) ? 1 : 0;
             else if (opcode == OPCODE_LOG_AND)      unknownValue = (value) ? 1 : 0;
             else if (opcode == OPCODE_BIT_OR)       unknownValue = (value&(~knownConstant));
@@ -517,7 +517,7 @@ uint32_t OBD::CalculateReverseElementary(uint32_t value, uint8_t opcode, uint32_
             else
                 return 0;
 
-            // 2.1.2. Заполнение байт данных фрейма соответствующими значениями
+            /// 2.1.2. Заполнение байт данных фрейма соответствующими значениями
 			if ( opcode == OPCODE_EQU )
 			{
 				if (IsItDataFrame(operand1))
@@ -534,15 +534,15 @@ uint32_t OBD::CalculateReverseElementary(uint32_t value, uint8_t opcode, uint32_
 			}
         }
 
-        // 2.2. Попытка выполнения обратного элементарного расчета, если константы нет
+        /// 2.2. Попытка выполнения обратного элементарного расчета, если константы нет
         else if ( IsItDataFrame(operand1) || IsItDataFrame(operand2) )
         {
             uint8_t byteFrameCount = ( IsItDataFrame(operand1) )?operand1:operand2;
 
-            // 2.2.1. Предполагаем, что расчет не нужен
+            /// 2.2.1. Предполагаем, что расчет не нужен
             unknownValue = value;
 
-            // 2.2.2. Заполнение байт данных фрейма предполагаемыми значениями
+            /// 2.2.2. Заполнение байт данных фрейма предполагаемыми значениями
             if (opcode == OPCODE_LOG_OR)            frame.Data[byteFrameCount] = (value) ? 1 : 0;
             else if (opcode == OPCODE_LOG_AND)      frame.Data[byteFrameCount] = (value) ? 1 : 0;
             else if (opcode == OPCODE_BIT_OR)       frame.Data[byteFrameCount] = uint8_t(value);
@@ -555,7 +555,7 @@ uint32_t OBD::CalculateReverseElementary(uint32_t value, uint8_t opcode, uint32_
             return 0;
 
     }
-    // 3. Если тернарный оператор
+    /// 3. [Не встречались]Если тернарный оператор
     else if (opcode == OPCODE_IF_ELSE)
     {
         if (operand1)
