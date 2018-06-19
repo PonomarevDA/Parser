@@ -16,10 +16,10 @@ public:
     */
     struct Node
     {
-        Node() : Value(0), ChildsCount(0), ChildsArr(nullptr), Parent(nullptr) {}
+        Node() : Value(0), ChildsCount(0), Parent(nullptr) {}
         uint8_t Value;
         uint8_t ChildsCount;
-        Node** ChildsArr;
+        Node* ChildsArr[3];
         Node* Parent;
     };
 
@@ -27,7 +27,7 @@ public:
     Tree(uint8_t maxSize) : Size(0), MaxSize(maxSize) {}	/*TODO: конструктор с аргументом, но размер все равно 32*/
 
     Node* AddNodeLower(uint8_t);							// добавить операнд (узел не имеет потомков)
-    Node* AddNodeParent(uint8_t, Node**, uint8_t);          // добавить оператор (аргументы: байт вместе с потомками)
+    Node* AddNodeParent(uint8_t, Node**, int8_t);           // добавить оператор (аргументы: байт вместе с потомками)
     Node* GetBaseNode();									// получить указатель на самый верхний узел
 
     uint8_t GetSize();

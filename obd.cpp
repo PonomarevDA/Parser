@@ -1,30 +1,6 @@
 #include "obd.hpp"
 #include "cstring"  // для memcpy
-#include <iostream>
-
-
-/*
-* @brief Имитация инициализации тестового стенда
-* @note Единственная строчка кода, которая будет добавлена в оригинальный метод Init - это CreateTrees()
-*/
-void OBD::Init()
-{
-	ParamNumber = 1;
-    Value = 0;
-
-    uint8_t paramCount = 0;
-    /*
-    ParamTable[0].flength = 32;
-    uint8_t arr[32] = {0x01, 0x1B, 0x1B, 0x18, 0x1A, 0x18, 0x1A, 0x19,
-                       0x80, 0x82, 0x17, 0x03, 0x87, 0x81, 0x0D, 0x16,
-                       0x0F, 0x03, 0xFF, 0x88, 0x02, 0x1A, 0x1A, 0x1A,
-                       0x17, 0x03, 0x87, 0xA0, 0xA0, 0xA0, 0xA8, 0x99};
-    */
-    ParamTable[paramCount].FormulaLength = 12;
-    uint8_t arr[12] = { 0x01, 0x1A, 0x0D, 0x0D, 0x16, 0x02, 0x90, 0x16, 0x01, 0x88, 0x00, 0x8A};
-    memcpy(ParamTable[paramCount].Formula, arr, ParamTable[paramCount].FormulaLength);
-	CreateTrees();
-}
+#include <iostream> // types
 
 
 /*
@@ -32,60 +8,59 @@ void OBD::Init()
 */
 void OBD::CreateTrees()
 {
-	for (uint8_t paramCount = 0; paramCount < ParamNumber; paramCount++)
-	{
-		uint8_t dataByteCount = 0;
-		memset(ParamTable[paramCount].DataBytes, 0x55, 4);
-		for (uint8_t byteCount = ParamTable[paramCount].FormulaLength; byteCount > 1;)
-		{
-			uint8_t byte = ParamTable[paramCount].Formula[--byteCount];
-			/// Если операнд
-			if ( IsItOperand(byte) )
-			{
-				Tree::Node* op = ParamTable[paramCount].tree.AddNodeLower(byte);
-				buf.Push(op);
-				if ( IsItDataFrame(byte) && (dataByteCount < MAX_NUMBER_OF_DATA_BYTES) &&
-					(byte != ParamTable[paramCount].DataBytes[0]) && (ParamTable[paramCount].DataBytes[1]) &&
-					(byte != ParamTable[paramCount].DataBytes[2]) && (ParamTable[paramCount].DataBytes[3]) )
-					ParamTable[paramCount].DataBytes[dataByteCount++] = byte;
-			}
-			/// Если оператор
-			else
-			{
-				/// Если унарный оператор <=> 1 наследник
-				if ((byte == OPCODE_LOG_NOT) || (byte == OPCODE_BIT_NOT))
-				{
-					uint8_t length = 1;
-					Tree::Node** ops = new Tree::Node*[length];
-					ops[0] = buf.Pop();
-					Tree::Node* op = ParamTable[paramCount].tree.AddNodeParent(byte, ops, length);
-					buf.Push(op);
-				}
-				/// Если бинарный оператор <=> 2 наследника
-				else if ((byte == OPCODE_LOG_OR) || (byte == OPCODE_LOG_AND) || ((byte >= OPCODE_BIT_OR) && (byte <= OPCODE_DIV)))
-				{
-					uint8_t length = 2;
-					Tree::Node** ops = new Tree::Node*[length];
-					ops[0] = buf.Pop();
-					ops[1] = buf.Pop();
-					Tree::Node* op = ParamTable[paramCount].tree.AddNodeParent(byte, ops, length);
-					buf.Push(op);
-				}
-				/// Если тернарный оператор <=> 3 наследника
-				else if (byte == OPCODE_IF_ELSE)
-				{
-					uint8_t length = 3;
-					Tree::Node** ops = new Tree::Node*[length];
-					ops[0] = buf.Pop();
-					ops[1] = buf.Pop();
-					ops[2] = buf.Pop();
-					Tree::Node* op = ParamTable[paramCount].tree.AddNodeParent(byte, ops, length);
-					buf.Push(op);
-				}
+    for (uint8_t paramCount = 0; paramCount < ParamNumber; paramCount++)
+    {
+        uint8_t dataByteCount = 0;
+        memset(ParamTable[paramCount].DataBytes, 0x55, 4);
+        for (uint8_t byteCount = ParamTable[paramCount].FormulaLength; byteCount > 1;)
+        {
+            uint8_t byte = ParamTable[paramCount].Formula[--byteCount];
+            if ( IsItOperand(byte) )
+            {
+                Tree::Node* op = ParamTable[paramCount].tree.AddNodeLower(byte);
+                buf.Push(op);
+                if ( IsItDataFrame(byte) && (dataByteCount < MAX_NUMBER_OF_DATA_BYTES) &&
+                    (byte != ParamTable[paramCount].DataBytes[0]) && (ParamTable[paramCount].DataBytes[1]) &&
+                    (byte != ParamTable[paramCount].DataBytes[2]) && (ParamTable[paramCount].DataBytes[3]) )
+                    ParamTable[paramCount].DataBytes[dataByteCount++] = byte;
+            }
+            else /// (IsItOperator(byte) )
+            {
+                if ( IsItUnaryOperator(byte) )
+                {
+                    uint8_t length = 1;
+                    Tree::Node* ops[3];
+                    ops[0] = buf.Pop();
+                    Tree::Node* op = ParamTable[paramCount].tree.AddNodeParent(byte, ops, length);
+                    buf.Push(op);
+                }
+                else if ( IsItBinaryOperator(byte) )
+                {
+                    uint8_t length = 2;
+                    Tree::Node* ops[3];
+                    ops[0] = buf.Pop();
+                    ops[1] = buf.Pop();
+                    Tree::Node* op = ParamTable[paramCount].tree.AddNodeParent(byte, ops, length);
+                    buf.Push(op);
+                }
+                else if ( IsItTernaryOperator(byte) )   /// => 3 наследника
+                {
+                    uint8_t length = 3;
+                    Tree::Node* ops[3];
+                    ops[0] = buf.Pop();
+                    ops[1] = buf.Pop();
+                    ops[2] = buf.Pop();
+                    Tree::Node* op = ParamTable[paramCount].tree.AddNodeParent(byte, ops, length);
+                    buf.Push(op);
+                }
+                else
+                {
 
-			}
-		}
-	}
+                }
+
+            }
+        }
+    }
 }
 
 
@@ -221,11 +196,11 @@ uint32_t OBD::DoReverseCalculateWithTree(uint32_t value, Tree::Node* node)
         uint8_t operand2 = node->ChildsArr[1]->Value;
 
         if ( IsItConst(operand1) && IsItConst(operand2) )
-		{ 
-			operand1 -= 0x80;
-			operand2 -= 0x80;
-			value = CalculateDirectElementary(node->Value, operand1, operand2);
-		}
+        {
+            operand1 -= 0x80;
+            operand2 -= 0x80;
+            value = CalculateDirectElementary(node->Value, operand1, operand2);
+        }
         else if ( IsItOperand(operand1) || IsItOperand(operand2) )
         {
             value = CalculateReverseElementary(value, node->Value, operand1, operand2);
@@ -266,39 +241,41 @@ uint8_t OBD::DoReverseCalculateWithBruteForce(int64_t needValue)
         OK = 0,
         ERROR = 1,
     };
-	uint8_t indexByte0 = ParamTable[ParamCount].DataBytes[0];
-	uint8_t indexByte1 = ParamTable[ParamCount].DataBytes[1];
-	uint8_t indexByte2 = ParamTable[ParamCount].DataBytes[2];
-	uint8_t indexByte3 = ParamTable[ParamCount].DataBytes[3];
-	uint16_t valueByte0 = ( IsItDataFrame(indexByte0) ) ? 0 : 255;
-	uint16_t valueByte1 = ( IsItDataFrame(indexByte1) ) ? 0 : 255;
-	uint16_t valueByte2 = ( IsItDataFrame(indexByte2) ) ? 0 : 255;
-	uint16_t valueByte3 = ( IsItDataFrame(indexByte3) ) ? 0 : 255;
+    uint8_t indexByte0 = ParamTable[ParamCount].DataBytes[0];
+    uint8_t indexByte1 = ParamTable[ParamCount].DataBytes[1];
+    uint8_t indexByte2 = ParamTable[ParamCount].DataBytes[2];
+    uint8_t indexByte3 = ParamTable[ParamCount].DataBytes[3];
+    if( IsItDataFrame(indexByte3) )
+        return ERROR;
+    uint16_t valueByte0 = ( IsItDataFrame(indexByte0) ) ? 0 : 255;
+    uint16_t valueByte1 = ( IsItDataFrame(indexByte1) ) ? 0 : 255;
+    uint16_t valueByte2 = ( IsItDataFrame(indexByte2) ) ? 0 : 255;
+    uint16_t valueByte3 = ( IsItDataFrame(indexByte3) ) ? 0 : 255;
     while (valueByte3 < 256)
     {
-		frame.Data[indexByte3] = (uint8_t)valueByte3;
-		while (valueByte2 < 256)
+        frame.Data[indexByte3] = (uint8_t)valueByte3;
+        while (valueByte2 < 256)
         {
-			frame.Data[indexByte2] = (uint8_t)valueByte2;
-			while (valueByte1 < 256)
+            frame.Data[indexByte2] = (uint8_t)valueByte2;
+            while (valueByte1 < 256)
             {
-				frame.Data[indexByte1] = (uint8_t)valueByte1;
-				while (valueByte0 < 256)
-				{
-					frame.Data[indexByte0] = (uint8_t)valueByte0;
-					DoDirectCalculate();
-					if (Value == needValue)
-						return OK;
-					valueByte0++;
-				}
-				valueByte0 = 0;
-				valueByte1++;
+                frame.Data[indexByte1] = (uint8_t)valueByte1;
+                while (valueByte0 < 256)
+                {
+                    frame.Data[indexByte0] = (uint8_t)valueByte0;
+                    DoDirectCalculate();
+                    if (Value == needValue)
+                        return OK;
+                    valueByte0++;
+                }
+                valueByte0 = 0;
+                valueByte1++;
             }
-			valueByte1 = 0;
-			valueByte2++;
+            valueByte1 = 0;
+            valueByte2++;
         }
-		valueByte2 = 0;
-		valueByte3++;
+        valueByte2 = 0;
+        valueByte3++;
     }
     return ERROR;
 }
@@ -318,49 +295,49 @@ uint8_t OBD::DoReverseCalculateWithMethodDichotomy(int64_t NeedValue)
         ERROR = 1,
     };
 
-	/// Init variables
+    /// Init variables
     uint32_t dataMinBorder = 0;
     uint32_t dataMaxBorder;
     uint32_t dataGuess;
-	uint8_t counter = 0;
-	uint8_t indexByte0 = ParamTable[ParamCount].DataBytes[0];
-	uint8_t indexByte1 = ParamTable[ParamCount].DataBytes[1];
-	uint8_t indexByte2 = ParamTable[ParamCount].DataBytes[2];
-	uint8_t indexByte3 = ParamTable[ParamCount].DataBytes[3];
-	if (IsItDataFrame(indexByte3))
-	{
-		dataMaxBorder = 4294967295;	/// 2^32 - 1
-		dataGuess = 2147483648;		/// 2^31
-		frame.Data[indexByte3] = (dataGuess >> 24) % 256;
-		frame.Data[indexByte2] = (dataGuess >> 16) % 256;
-		frame.Data[indexByte1] = (dataGuess >> 8) % 256;
-		frame.Data[indexByte0] = dataGuess % 256;
-	}
-	else if (IsItDataFrame(indexByte2))
-	{
-		dataMaxBorder = 16777215;	/// 2^24 - 1
-		dataGuess = 8388608;		/// 2^24
-		frame.Data[indexByte2] = (dataGuess >> 16) % 256;
-		frame.Data[indexByte1] = (dataGuess >> 8) % 256;
-		frame.Data[indexByte0] = dataGuess % 256;
-	}
-	else if (IsItDataFrame(indexByte1))
-	{
-		dataMaxBorder = 65535;		/// 2^16 - 1
-		dataGuess = 32769;			/// 2^16
-		frame.Data[indexByte1] = (dataGuess >> 8) % 256;
-		frame.Data[indexByte0] = dataGuess % 256;
-	}
-	else if (IsItDataFrame(indexByte0))
-	{
-		dataMaxBorder = 255;		/// 2^8 - 1
-		dataGuess = 128;			/// 2^7
-		frame.Data[indexByte0] = dataGuess;
-	}
-	else
-		return ERROR;
+    uint8_t counter = 0;
+    uint8_t indexByte0 = ParamTable[ParamCount].DataBytes[0];
+    uint8_t indexByte1 = ParamTable[ParamCount].DataBytes[1];
+    uint8_t indexByte2 = ParamTable[ParamCount].DataBytes[2];
+    uint8_t indexByte3 = ParamTable[ParamCount].DataBytes[3];
+    if (IsItDataFrame(indexByte3))
+    {
+        dataMaxBorder = 4294967295;	/// 2^32 - 1
+        dataGuess = 2147483648;		/// 2^31
+        frame.Data[indexByte3] = (dataGuess >> 24) % 256;
+        frame.Data[indexByte2] = (dataGuess >> 16) % 256;
+        frame.Data[indexByte1] = (dataGuess >> 8) % 256;
+        frame.Data[indexByte0] = dataGuess % 256;
+    }
+    else if (IsItDataFrame(indexByte2))
+    {
+        dataMaxBorder = 16777215;	/// 2^24 - 1
+        dataGuess = 8388608;		/// 2^24
+        frame.Data[indexByte2] = (dataGuess >> 16) % 256;
+        frame.Data[indexByte1] = (dataGuess >> 8) % 256;
+        frame.Data[indexByte0] = dataGuess % 256;
+    }
+    else if (IsItDataFrame(indexByte1))
+    {
+        dataMaxBorder = 65535;		/// 2^16 - 1
+        dataGuess = 32769;			/// 2^16
+        frame.Data[indexByte1] = (dataGuess >> 8) % 256;
+        frame.Data[indexByte0] = dataGuess % 256;
+    }
+    else if (IsItDataFrame(indexByte0))
+    {
+        dataMaxBorder = 255;		/// 2^8 - 1
+        dataGuess = 128;			/// 2^7
+        frame.Data[indexByte0] = dataGuess;
+    }
+    else
+        return ERROR;
 
-	/// Main algorithm
+    /// Main algorithm
     DoDirectCalculate();
     while (Value != NeedValue)
     {
@@ -371,7 +348,7 @@ uint8_t OBD::DoReverseCalculateWithMethodDichotomy(int64_t NeedValue)
             dataMaxBorder = dataGuess;
             dataGuess = (dataMaxBorder + dataMinBorder) >> 1;	// округляем в меньшую сторону
         }
-		/// Если нужное число справа
+        /// Если нужное число справа
         else
         {
             dataMinBorder = dataGuess;
@@ -380,19 +357,19 @@ uint8_t OBD::DoReverseCalculateWithMethodDichotomy(int64_t NeedValue)
         frame.Data[indexByte0] = dataGuess % 256;
         frame.Data[indexByte1] = (dataGuess >> 8) % 256;
         frame.Data[indexByte2] = (dataGuess >> 16) % 256;
-		frame.Data[indexByte3] = (dataGuess >> 24) % 256;
+        frame.Data[indexByte3] = (dataGuess >> 24) % 256;
         DoDirectCalculate();
 
-		/// Проверка на случай, если данный метод зациклится
-		if ((counter++) > 32)
-		{ 
-			frame.Data[indexByte0] = 0;
-			frame.Data[indexByte1] = 0;
-			frame.Data[indexByte2] = 0;
-			frame.Data[indexByte3] = 0;
-			return ERROR;
-		}
-			
+        /// Проверка на случай, если данный метод зациклится
+        if ((counter++) > 32)
+        {
+            frame.Data[indexByte0] = 0;
+            frame.Data[indexByte1] = 0;
+            frame.Data[indexByte2] = 0;
+            frame.Data[indexByte3] = 0;
+            return ERROR;
+        }
+
     }
     return OK;
 }
@@ -498,20 +475,20 @@ uint32_t OBD::CalculateReverseElementary(uint32_t value, uint8_t opcode, uint32_
                 return 0;
 
             /// 2.1.2. Заполнение байт данных фрейма соответствующими значениями
-			if ( opcode == OPCODE_EQU )
-			{
-				if (IsItDataFrame(operand1))
-					frame.Data[operand1] = unknownValue;
-				else if (IsItDataFrame(operand2))
-					frame.Data[operand2] = unknownValue;
-			}
-			else
-			{
-				if (IsItDataFrame(operand1))
-					frame.Data[operand1] |= unknownValue;
-				else if (IsItDataFrame(operand2))
-					frame.Data[operand2] |= unknownValue;
-			}
+            if ( opcode == OPCODE_EQU )
+            {
+                if (IsItDataFrame(operand1))
+                    frame.Data[operand1] = unknownValue;
+                else if (IsItDataFrame(operand2))
+                    frame.Data[operand2] = unknownValue;
+            }
+            else
+            {
+                if (IsItDataFrame(operand1))
+                    frame.Data[operand1] |= unknownValue;
+                else if (IsItDataFrame(operand2))
+                    frame.Data[operand2] |= unknownValue;
+            }
         }
 
         /// 2.2. Попытка выполнения обратного элементарного расчета, если константы нет
@@ -554,11 +531,11 @@ uint32_t OBD::CalculateReverseElementary(uint32_t value, uint8_t opcode, uint32_
 /*
 * @brief Определяет, является ли данный байт байтом данных фрейма
 * @param byte - байт для рассмотрения
-* @return 1 - является, 0 - нет 
+* @return 1 - является, 0 - нет
 */
 uint8_t OBD::IsItDataFrame(uint8_t byte)
 {
-	return (byte < 0x08) ? 1 : 0;
+    return (byte < 0x08) ? 1 : 0;
 }
 
 
@@ -569,7 +546,7 @@ uint8_t OBD::IsItDataFrame(uint8_t byte)
 */
 uint8_t OBD::IsItConst(uint8_t byte)
 {
-	return (byte >= 0x80) ? 1 : 0;
+    return (byte >= 0x80) ? 1 : 0;
 }
 
 
@@ -580,7 +557,7 @@ uint8_t OBD::IsItConst(uint8_t byte)
 */
 uint8_t OBD::IsItOperator(uint8_t byte)
 {
-	return ((byte >= 0x08) && (byte < 0x80)) ? 1 : 0;
+    return ((byte >= 0x08) && (byte < 0x80)) ? 1 : 0;
 }
 
 
@@ -591,5 +568,38 @@ uint8_t OBD::IsItOperator(uint8_t byte)
 */
 uint8_t OBD::IsItOperand(uint8_t byte)
 {
-	return ((byte < 0x08) || (byte >= 0x80)) ? 1 : 0;
+    return ((byte < 0x08) || (byte >= 0x80)) ? 1 : 0;
+}
+
+
+/*
+* @brief Определяет, является ли данный байт унарным оператором
+* @param byte - байт для рассмотрения
+* @return 1 - является, 0 - нет
+*/
+uint8_t OBD::IsItUnaryOperator(uint8_t byte)
+{
+    return ( (byte == OPCODE_LOG_NOT) || (byte == OPCODE_BIT_NOT) )? 1 : 0;
+}
+
+
+/*
+* @brief Определяет, является ли данный байт бинарным оператором
+* @param byte - байт для рассмотрения
+* @return 1 - является, 0 - нет
+*/
+uint8_t OBD::IsItBinaryOperator(uint8_t byte)
+{
+    return ( (byte == OPCODE_LOG_OR) || (byte == OPCODE_LOG_AND) || ( (byte >= OPCODE_BIT_OR) && (byte <= OPCODE_DIV) ) ) ? 1 : 0;
+}
+
+
+/*
+* @brief Определяет, является ли данный байт тернарным оператором
+* @param byte - байт для рассмотрения
+* @return 1 - является, 0 - нет
+*/
+uint8_t OBD::IsItTernaryOperator(uint8_t byte)
+{
+    return (byte == OPCODE_IF_ELSE) ? 1 : 0;
 }

@@ -30,15 +30,17 @@ Tree::Node* Tree::AddNodeLower(uint8_t value)
 * @param value - значение узла
 * @return указатель на узел, иначе nullptr
 */
-Tree::Node* Tree::AddNodeParent(uint8_t value, Node** childsArr, uint8_t childsCount)
+Tree::Node* Tree::AddNodeParent(uint8_t value, Node** childsArr, int8_t childsNum)
 {
     if (Size < MaxSize)
     {
         ArrOfNodes[Size].Value = value;
-        ArrOfNodes[Size].ChildsArr = childsArr;
-        ArrOfNodes[Size].ChildsCount = childsCount;
-        while(childsCount-- != 0)
-            (*(childsArr)++)->Parent = &ArrOfNodes[Size];
+        ArrOfNodes[Size].ChildsCount = childsNum;
+        while(--childsNum >= 0)
+        {
+            childsArr[childsNum]->Parent = &ArrOfNodes[Size];
+            ArrOfNodes[Size].ChildsArr[childsNum] = childsArr[childsNum];
+        }
         return &ArrOfNodes[Size++];
     }
     return nullptr;

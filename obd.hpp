@@ -11,7 +11,7 @@ typedef signed long long int64_t;
 class OBD
 {
 public:
-	/// Коды операторов
+    /// Коды операторов
     enum Opcode_t
     {
         OPCODE_LOG_OR = 0x09,		///< ||
@@ -36,7 +36,7 @@ public:
         OPCODE_IF_ELSE = 0x1C,		///< ? IF-ELSE
     };
 
-	/// Структура, хранящая байты данных фрейма
+    /// Структура, хранящая байты данных фрейма
     struct Frame
     {
         Frame(uint8_t d0 = 0, uint8_t d1 = 0, uint8_t d2 = 0, uint8_t d3 = 0, uint8_t d4 = 0, uint8_t d5 = 0, uint8_t d6 = 0, uint8_t d7 = 0)
@@ -46,22 +46,20 @@ public:
         uint8_t Data[8];
     };
 
-	/// Структура, хранящая информацию о датчиках
+    /// Структура, хранящая информацию о датчиках
     struct ParamTable_t
     {
         ParamTable_t(): FormulaLength(0), tree(32) {}	/// Конструктор
         uint8_t FormulaLength;
         uint8_t Formula[32];
         Tree tree;
-		uint8_t DataBytes[4];
+        uint8_t DataBytes[4];
     };
-    void Init();										/// Инициализация протокола: построение дерева
-    void Do();											/// Обработка текущего состояния
 protected:
-	enum
-	{
-		MAX_NUMBER_OF_DATA_BYTES = 4,
-	};
+    enum
+    {
+        MAX_NUMBER_OF_DATA_BYTES = 4,
+    };
     /// Метод инициализации:
     void CreateTrees();									/// Построить дерево синтаксического разбора
 
@@ -73,17 +71,20 @@ protected:
     uint32_t CalculateDirectElementary(uint8_t opcode, uint32_t operand1, uint32_t operand2 = 0, uint32_t operand3 = 0);
     uint32_t CalculateReverseElementary(uint32_t value, uint8_t opcode, uint32_t operand1, uint32_t operand2 = 0, uint32_t operand3 = 0);
 
-	/// Методы проверки типа байта
-	uint8_t IsItDataFrame(uint8_t byte);
-	uint8_t IsItConst(uint8_t byte);
-	uint8_t IsItOperator(uint8_t byte);
-	uint8_t IsItOperand(uint8_t byte);
+    /// Методы проверки типа байта
+    uint8_t IsItDataFrame(uint8_t byte);
+    uint8_t IsItConst(uint8_t byte);
+    uint8_t IsItOperator(uint8_t byte);
+    uint8_t IsItOperand(uint8_t byte);
+    uint8_t IsItUnaryOperator(uint8_t byte);
+    uint8_t IsItBinaryOperator(uint8_t byte);
+    uint8_t IsItTernaryOperator(uint8_t byte);
 
     /// Variables:
     Stack buf;
     ParamTable_t ParamTable[9];
     uint8_t ParamNumber;
-	uint8_t ParamCount;
+    uint8_t ParamCount;
     Frame frame;
     uint32_t Value;
 };

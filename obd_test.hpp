@@ -6,20 +6,20 @@
 class TestOBD: public OBD
 {
 private:
-	/// Тестовые кейсы
-    void CreateTreesForReverseElementary();
-    void CreateTreesForAudiA3_2013();
-    void CreateTreeForReverseWithDifficulties();
-
-	/// Методы иллюстрации результатов алгоритмов в терминале:
-	void ShowFormula();
-	void ShowByte(uint8_t byte);
-	void ShowTree();
-	void ShowTreeNode(Tree::Node*);
-public:
-	/// Методы тестирования
-    void TestCalculationReverse();
+    /// Методы для тестирования
+    void TestCalculationReverse(int64_t needValue);
     void TestCalculations();
+
+    /// Методы иллюстрации результатов алгоритмов в терминале:
+    void ShowFormula();
+    void ShowByte(uint8_t byte);
+    void ShowTree();
+    void ShowTreeNode(Tree::Node*);
+public:
+    /// Тестовые кейсы
+    void TestReverseCalculateElementary();
+    void TestReverseCalculateForAudiA3_2013();
+    void TestReverseCalculateWithDifficulties();
 };
 
 
