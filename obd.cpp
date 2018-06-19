@@ -1,10 +1,10 @@
 #include "obd.hpp"
-#include "cstring"  // для memcpy
+#include "cstring"  // for memcpy
 #include <iostream> // types
 
 
 /*
-* @brief Построение дерева синтаксического разбора формулы
+* @brief Построить деревья для синтаксического анализа
 */
 void OBD::CreateTrees()
 {
@@ -43,7 +43,7 @@ void OBD::CreateTrees()
                     Tree::Node* op = ParamTable[paramCount].tree.AddNodeParent(byte, ops, length);
                     buf.Push(op);
                 }
-                else if ( IsItTernaryOperator(byte) )   /// => 3 наследника
+                else if ( IsItTernaryOperator(byte) )
                 {
                     uint8_t length = 3;
                     Tree::Node* ops[3];
@@ -66,7 +66,7 @@ void OBD::CreateTrees()
 
 /*
 * @brief Выполнение прямого расчета по формуле
-* @note Скопировано из тестового стенда
+* @note скопировано из терминала
 */
 void OBD::DoDirectCalculate()
 {
@@ -135,7 +135,7 @@ void OBD::DoDirectCalculate()
 /*
 * @brief Выполнить попытку рекурсивного обратного расчета с помощью дерева
 * @param value - результат выполнения прямого расчета указанного узла (оператора)
-* @return рассчитанное число
+* @return value - рассчитанное число
 */
 uint32_t OBD::DoReverseCalculateWithTree(uint32_t value, Tree::Node* node)
 {
@@ -163,16 +163,16 @@ uint32_t OBD::DoReverseCalculateWithTree(uint32_t value, Tree::Node* node)
     /// 1. If this node is OPERAND => this node is apex (висячая вершина)
     if (node->ChildsCount == 0)
     {
-        // This node must be Base
         if ((node == base) && IsItDataFrame(node->Value) )
         {
             frame.Data[node->Value] = value;
         }
-        // Else, there is error in formula
         else
+        {
             status = FORMULA_ERROR_NODE_IS_OPERAND;
+        }
     }
-    /// [TODO]2. If this node is UNARY OPERATOR, try to calculate it
+    /// 2. If this node is UNARY OPERATOR, try to calculate it
     else if (node->ChildsCount == 1)
     {
         uint8_t childByte = base->ChildsArr[0]->Value;
@@ -181,12 +181,9 @@ uint32_t OBD::DoReverseCalculateWithTree(uint32_t value, Tree::Node* node)
         {
             value = CalculateReverseElementary(value, node->Value, childByte);
         }
-        else
+        else /// ( IsItOperator(childByte) )
         {
-            uint8_t status = DoReverseCalculateWithTree(value, node->ChildsArr[0]);
-            if (status != OK)
-                status = UNEXPECTED_ERROR;
-            /*TODO: обработка других ошибок*/
+            value = DoReverseCalculateWithTree(value, node->ChildsArr[0]);
         }
     }
     /// 3. If this node is BINARY OPERATOR, try to calculate it
@@ -197,8 +194,8 @@ uint32_t OBD::DoReverseCalculateWithTree(uint32_t value, Tree::Node* node)
 
         if ( IsItConst(operand1) && IsItConst(operand2) )
         {
-            operand1 -= 0x80;
-            operand2 -= 0x80;
+            operand1 -= 0x80;   /// from byteConst to operandConst
+            operand2 -= 0x80;   /// from byteConst to operandConst
             value = CalculateDirectElementary(node->Value, operand1, operand2);
         }
         else if ( IsItOperand(operand1) || IsItOperand(operand2) )
@@ -216,10 +213,10 @@ uint32_t OBD::DoReverseCalculateWithTree(uint32_t value, Tree::Node* node)
             value = CalculateDirectElementary(value, node->Value, operand1, operand2);
         }
     }
-    /// [TODO, if it need]4. If this node is TERNARY OPERATOR, try to calculate it
+    /// 4. If this node is TERNARY OPERATOR, try to calculate it
     else if (node->ChildsCount == 3)
     {
-        /*На практике таких формул не было замечено*/
+        /*There are no such formulas*/
     }
     /// 5. Если текущий узел - не пойми что
     else
@@ -230,8 +227,9 @@ uint32_t OBD::DoReverseCalculateWithTree(uint32_t value, Tree::Node* node)
 
 /*
 * @brief Обратный расчет с помощью метода перебора
-* @note Может выполняться очень долго (до получаса при 4 байтах)
-* @param NeedValue - число, которое должен распарсить терминал
+* @note Может выполняться очень долго (до получаса при 4 байтах),
+* поэтому при 4-ех байтах возвращаем ошибку
+* @param needValue - число, которое должен распарсить терминал
 * @return статус выполнения: 0 - все хорошо, иначе ошибка
 */
 uint8_t OBD::DoReverseCalculateWithBruteForce(int64_t needValue)
@@ -245,8 +243,10 @@ uint8_t OBD::DoReverseCalculateWithBruteForce(int64_t needValue)
     uint8_t indexByte1 = ParamTable[ParamCount].DataBytes[1];
     uint8_t indexByte2 = ParamTable[ParamCount].DataBytes[2];
     uint8_t indexByte3 = ParamTable[ParamCount].DataBytes[3];
+
     if( IsItDataFrame(indexByte3) )
         return ERROR;
+
     uint16_t valueByte0 = ( IsItDataFrame(indexByte0) ) ? 0 : 255;
     uint16_t valueByte1 = ( IsItDataFrame(indexByte1) ) ? 0 : 255;
     uint16_t valueByte2 = ( IsItDataFrame(indexByte2) ) ? 0 : 255;
@@ -283,7 +283,8 @@ uint8_t OBD::DoReverseCalculateWithBruteForce(int64_t needValue)
 
 /*
 * @brief Обратный расчет с помощью метода дихотомии
-* @note Может не сойтись и зависнуть, однако относительно быстрый
+* @note Может не сойтись и зависнуть, однако относительно быстрый,
+* поэтому добавлен счетчик, по переполнению которого возвращаем ошибку
 * @param NeedValue - число, которое должен распарсить терминал
 * @return статус выполнения: 0 - все хорошо, иначе ошибка
 */
@@ -342,17 +343,17 @@ uint8_t OBD::DoReverseCalculateWithMethodDichotomy(int64_t NeedValue)
     while (Value != NeedValue)
     {
         int64_t dif = Value - NeedValue;
-        /// Если нужное число слева
+        /// If the desired number on the left
         if (dif > 0)
         {
             dataMaxBorder = dataGuess;
-            dataGuess = (dataMaxBorder + dataMinBorder) >> 1;	// округляем в меньшую сторону
+            dataGuess = (dataMaxBorder + dataMinBorder) >> 1;	// round down
         }
-        /// Если нужное число справа
+        /// If the desired number on the right
         else
         {
             dataMinBorder = dataGuess;
-            dataGuess = ((dataMaxBorder + dataMinBorder) >> 1) + 1;	// округляем в большую сторону
+            dataGuess = ((dataMaxBorder + dataMinBorder) >> 1) + 1;	// round upwards
         }
         frame.Data[indexByte0] = dataGuess % 256;
         frame.Data[indexByte1] = (dataGuess >> 8) % 256;
@@ -360,13 +361,9 @@ uint8_t OBD::DoReverseCalculateWithMethodDichotomy(int64_t NeedValue)
         frame.Data[indexByte3] = (dataGuess >> 24) % 256;
         DoDirectCalculate();
 
-        /// Проверка на случай, если данный метод зациклится
+        /// Verification in case this method gets stuck
         if ((counter++) > 32)
         {
-            frame.Data[indexByte0] = 0;
-            frame.Data[indexByte1] = 0;
-            frame.Data[indexByte2] = 0;
-            frame.Data[indexByte3] = 0;
             return ERROR;
         }
 
@@ -433,19 +430,19 @@ uint32_t OBD::CalculateDirectElementary(uint8_t opcode, uint32_t operand1, uint3
 uint32_t OBD::CalculateReverseElementary(uint32_t value, uint8_t opcode, uint32_t operand1, uint32_t operand2, uint32_t operand3)
 {
     uint32_t unknownValue = 0;
-    /// 1. [NEED TEST'S]Если унарный оператор
-    if ( (opcode == OPCODE_LOG_NOT) || (opcode == OPCODE_BIT_NOT) )
-        unknownValue = CalculateDirectElementary(opcode, value);
 
-    /// 2. Если бинарный оператор
-    else if ( (opcode == OPCODE_LOG_OR) || (opcode == OPCODE_LOG_AND) || ( (opcode >= OPCODE_BIT_OR)&&(opcode <= OPCODE_DIV) ) )
+    if ( IsItUnaryOperator(opcode) )
     {
-        /// 2.1. Выполнение обратного элементарного расчета, если есть хотя бы одна константа
+        unknownValue = CalculateDirectElementary(opcode, value);
+    }
+    else if ( IsItBinaryOperator(opcode) )
+    {
+        /// 1. Выполнение обратного элементарного расчета, если есть хотя бы одна константа
         if ( IsItConst(operand1) || IsItConst(operand2) )
         {
-            uint8_t knownConstant = ( IsItConst(operand1) )? (operand1 - 0x80) : (operand2 - 0x80);
+            uint8_t knownConstant = ( IsItConst(operand1) ) ? (operand1 - 0x80) : (operand2 - 0x80);
 
-            /// 2.1.1. Выполнение расчета
+            /// 1.1. Выполнение расчета
             if (opcode == OPCODE_LOG_OR)            unknownValue = (value) ? 1 : 0;
             else if (opcode == OPCODE_LOG_AND)      unknownValue = (value) ? 1 : 0;
             else if (opcode == OPCODE_BIT_OR)       unknownValue = (value&(~knownConstant));
@@ -474,8 +471,8 @@ uint32_t OBD::CalculateReverseElementary(uint32_t value, uint8_t opcode, uint32_
             else
                 return 0;
 
-            /// 2.1.2. Заполнение байт данных фрейма соответствующими значениями
-            if ( opcode == OPCODE_EQU )
+            /// 1.2. Заполнение байт данных фрейма соответствующими значениями
+            if ( opcode == OPCODE_EQU ) /// для "==" заполняем особенным образом
             {
                 if (IsItDataFrame(operand1))
                     frame.Data[operand1] = unknownValue;
@@ -491,15 +488,15 @@ uint32_t OBD::CalculateReverseElementary(uint32_t value, uint8_t opcode, uint32_
             }
         }
 
-        /// 2.2. Попытка выполнения обратного элементарного расчета, если константы нет
+        /// 2. Попытка выполнения обратного элементарного расчета, если константы нет
         else if ( IsItDataFrame(operand1) || IsItDataFrame(operand2) )
         {
             uint8_t byteFrameCount = ( IsItDataFrame(operand1) )?operand1:operand2;
 
-            /// 2.2.1. Предполагаем, что расчет не нужен
+            /// 2.1. Предполагаем, что расчет не нужен
             unknownValue = value;
 
-            /// 2.2.2. Заполнение байт данных фрейма предполагаемыми значениями
+            /// 2.2. Заполнение байт данных фрейма предполагаемыми значениями
             if (opcode == OPCODE_LOG_OR)            frame.Data[byteFrameCount] = (value) ? 1 : 0;
             else if (opcode == OPCODE_LOG_AND)      frame.Data[byteFrameCount] = (value) ? 1 : 0;
             else if (opcode == OPCODE_BIT_OR)       frame.Data[byteFrameCount] = uint8_t(value);
@@ -510,9 +507,7 @@ uint32_t OBD::CalculateReverseElementary(uint32_t value, uint8_t opcode, uint32_
         }
         else
             return 0;
-
     }
-    /// 3. [Не встречались]Если тернарный оператор
     else if (opcode == OPCODE_IF_ELSE)
     {
         if (operand1)
