@@ -168,49 +168,57 @@ void TestOBD::TestReverseCalculateForAudiA3_2013()
 {
     ParamNumber = 0;
     ParamCount = 0;
-    {	// "( d4 &amp; 1 ) == 0"
+    // 0. Дискретная "( d4 &amp; 1 ) == 0"
+    {
         ParamTable[ParamNumber].FormulaLength = 6;
         uint8_t arr[12] = { 0x01, 0x10, 0x0F, 0x04, 0x81, 0x80 };
         memcpy(ParamTable[ParamNumber].Formula, arr, ParamTable[ParamNumber].FormulaLength);
         ParamNumber++;
     }
-    {	// "( ( d3 &lt;&lt; 8 ) | d2 ) / 4"
+    // 1. "( ( d3 &lt;&lt; 8 ) | d2 ) / 4"
+    {
         ParamTable[ParamNumber].FormulaLength = 8;
         uint8_t arr[8] = { 0x01, 0x1B, 0x0D, 0x16, 0x03, 0x88, 0x02, 0x84 };
         memcpy(ParamTable[ParamNumber].Formula, arr, ParamTable[ParamNumber].FormulaLength);
         ParamNumber++;
     }
-    {	// "( ( ( d2 &amp; 15 ) &lt;&lt; 16 ) | ( d1 &lt;&lt; 8 ) | d0 ) * 10"
+    // 2. "( ( ( d2 &amp; 15 ) &lt;&lt; 16 ) | ( d1 &lt;&lt; 8 ) | d0 ) * 10"
+    {
         ParamTable[ParamNumber].FormulaLength = 12;
         uint8_t arr[12] = { 0x01, 0x1A, 0x0D, 0x0D, 0x16, 0x02, 0x90, 0x16, 0x01, 0x88, 0x00, 0x8A };
         memcpy(ParamTable[ParamNumber].Formula, arr, ParamTable[ParamNumber].FormulaLength);
         ParamNumber++;
     }
-    {	// "d1 - 60"
+    // 3. "d1 - 60"
+    {
         ParamTable[ParamNumber].FormulaLength = 4;
         uint8_t arr[4] = { 0x01, OPCODE_SUB, 0x01, 0xBC};
         memcpy(ParamTable[ParamNumber].Formula, arr, ParamTable[ParamNumber].FormulaLength);
         ParamNumber++;
     }
-    {	// "( ( d1 &gt;&gt; 5 ) &amp; 1 ) == 1"
+    // 4. Дискретная "( ( d1 &gt;&gt; 5 ) &amp; 1 ) == 1"
+    {
         ParamTable[ParamNumber].FormulaLength = 8;
         uint8_t arr[8] = { 0x01, OPCODE_EQU, OPCODE_BIT_AND, OPCODE_SHIFT_RIGHT, 0x01, 0x85, 0x81, 0x81};
         memcpy(ParamTable[ParamNumber].Formula, arr, ParamTable[ParamNumber].FormulaLength);
         ParamNumber++;
     }
-    {   // "( ( d1 &gt;&gt; 6 ) &amp; 1 ) == 1"
+    // 5. Дискретная "( ( d1 &gt;&gt; 6 ) &amp; 1 ) == 1"
+    {
         ParamTable[ParamNumber].FormulaLength = 8;
         uint8_t arr[8] = { 0x01, OPCODE_EQU, OPCODE_BIT_AND, OPCODE_SHIFT_RIGHT, 0x01, 0x86, 0x81, 0x81};
         memcpy(ParamTable[ParamNumber].Formula, arr, ParamTable[ParamNumber].FormulaLength);
         ParamNumber++;
     }
-    {    // "d5 &amp; 127"
+    // 6. "d5 &amp; 127"
+    {
         ParamTable[ParamNumber].FormulaLength = 4;
         uint8_t arr[4] = { 0x01, OPCODE_BIT_AND, 0x05, 0xFF};
         memcpy(ParamTable[ParamNumber].Formula, arr, ParamTable[ParamNumber].FormulaLength);
         ParamNumber++;
     }
-    {    // "0"
+    // 7. "0"
+    {
         ParamTable[ParamNumber].FormulaLength = 2;
         uint8_t arr[2] = { 0x01, 0x80};
         memcpy(ParamTable[ParamNumber].Formula, arr, ParamTable[ParamNumber].FormulaLength);
@@ -222,8 +230,10 @@ void TestOBD::TestReverseCalculateForAudiA3_2013()
     for (ParamCount = 0; ParamCount < ParamNumber; ParamCount++)
     {
         uint8_t maxCountOfValue = 4;
-        if (ParamCount >= 6)
+        if ( (ParamCount == 0) || (ParamCount == 4) || (ParamCount == 5))
             maxCountOfValue = 2;
+        else
+            maxCountOfValue = 4;
 
         for (uint8_t countOfValue = 0; countOfValue < maxCountOfValue; countOfValue++)
         {
