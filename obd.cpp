@@ -137,7 +137,7 @@ void OBD::DoDirectCalculate()
 * @param value - результат выполнения прямого расчета указанного узла (оператора)
 * @return value - рассчитанное число
 */
-uint32_t OBD::DoReverseCalculateWithTree(uint32_t value, Tree::Node* node)
+uint32_t OBD::DoReverseCalculateWithTree(uint32_t value, const Tree::Node* node)
 {
     enum: uint8_t
     {
@@ -232,7 +232,7 @@ uint32_t OBD::DoReverseCalculateWithTree(uint32_t value, Tree::Node* node)
 * @param needValue - число, которое должен распарсить терминал
 * @return статус выполнения: 0 - все хорошо, иначе ошибка
 */
-uint8_t OBD::DoReverseCalculateWithBruteForce(int64_t needValue)
+uint8_t OBD::DoReverseCalculateWithBruteForce(const int64_t needValue)
 {
     enum : uint8_t
     {
@@ -288,7 +288,7 @@ uint8_t OBD::DoReverseCalculateWithBruteForce(int64_t needValue)
 * @param NeedValue - число, которое должен распарсить терминал
 * @return статус выполнения: 0 - все хорошо, иначе ошибка
 */
-uint8_t OBD::DoReverseCalculateWithMethodDichotomy(int64_t NeedValue)
+uint8_t OBD::DoReverseCalculateWithMethodDichotomy(const int64_t NeedValue)
 {
     enum : uint8_t
     {
@@ -381,7 +381,7 @@ uint8_t OBD::DoReverseCalculateWithMethodDichotomy(int64_t NeedValue)
 * @param operand3 - второй оператор, если есть
 * @return - результат расчета выражения
 */
-uint32_t OBD::CalculateDirectElementary(uint8_t opcode, uint32_t operand1, uint32_t operand2, uint32_t operand3)
+uint32_t OBD::CalculateDirectElementary(const uint8_t opcode, const uint32_t operand1, const uint32_t operand2, const uint32_t operand3)
 {
     if (opcode == OPCODE_LOG_OR)			return operand1 || operand2;
     else if (opcode == OPCODE_LOG_AND)		return operand1 && operand2;
@@ -427,7 +427,7 @@ uint32_t OBD::CalculateDirectElementary(uint8_t opcode, uint32_t operand1, uint3
 * @note Предполагается, что хотя бы 1 из аргументов константа или байт данных фрейма
 * @return partOfUnknownOperand - незивестный операнд
 */
-uint32_t OBD::CalculateReverseElementary(uint32_t value, uint8_t opcode, uint32_t operand1, uint32_t operand2, uint32_t operand3)
+uint32_t OBD::CalculateReverseElementary(uint32_t value, const uint8_t opcode, const uint32_t operand1, const uint32_t operand2, const uint32_t operand3)
 {
     uint32_t unknownValue = 0;
 
@@ -528,7 +528,7 @@ uint32_t OBD::CalculateReverseElementary(uint32_t value, uint8_t opcode, uint32_
 * @param byte - байт для рассмотрения
 * @return 1 - является, 0 - нет
 */
-uint8_t OBD::IsItDataFrame(uint8_t byte)
+uint8_t OBD::IsItDataFrame(const uint8_t byte)
 {
     return (byte < 0x08) ? 1 : 0;
 }
@@ -539,7 +539,7 @@ uint8_t OBD::IsItDataFrame(uint8_t byte)
 * @param byte - байт для рассмотрения
 * @return 1 - является, 0 - нет
 */
-uint8_t OBD::IsItConst(uint8_t byte)
+uint8_t OBD::IsItConst(const uint8_t byte)
 {
     return (byte >= 0x80) ? 1 : 0;
 }
@@ -550,7 +550,7 @@ uint8_t OBD::IsItConst(uint8_t byte)
 * @param byte - байт для рассмотрения
 * @return 1 - является, 0 - нет
 */
-uint8_t OBD::IsItOperator(uint8_t byte)
+uint8_t OBD::IsItOperator(const uint8_t byte)
 {
     return ((byte >= 0x08) && (byte < 0x80)) ? 1 : 0;
 }
@@ -561,7 +561,7 @@ uint8_t OBD::IsItOperator(uint8_t byte)
 * @param byte - байт для рассмотрения
 * @return 1 - является, 0 - нет
 */
-uint8_t OBD::IsItOperand(uint8_t byte)
+uint8_t OBD::IsItOperand(const uint8_t byte)
 {
     return ((byte < 0x08) || (byte >= 0x80)) ? 1 : 0;
 }
@@ -572,7 +572,7 @@ uint8_t OBD::IsItOperand(uint8_t byte)
 * @param byte - байт для рассмотрения
 * @return 1 - является, 0 - нет
 */
-uint8_t OBD::IsItUnaryOperator(uint8_t byte)
+uint8_t OBD::IsItUnaryOperator(const uint8_t byte)
 {
     return ( (byte == OPCODE_LOG_NOT) || (byte == OPCODE_BIT_NOT) )? 1 : 0;
 }
@@ -583,7 +583,7 @@ uint8_t OBD::IsItUnaryOperator(uint8_t byte)
 * @param byte - байт для рассмотрения
 * @return 1 - является, 0 - нет
 */
-uint8_t OBD::IsItBinaryOperator(uint8_t byte)
+uint8_t OBD::IsItBinaryOperator(const uint8_t byte)
 {
     return ( (byte == OPCODE_LOG_OR) || (byte == OPCODE_LOG_AND) || ( (byte >= OPCODE_BIT_OR) && (byte <= OPCODE_DIV) ) ) ? 1 : 0;
 }
@@ -594,7 +594,7 @@ uint8_t OBD::IsItBinaryOperator(uint8_t byte)
 * @param byte - байт для рассмотрения
 * @return 1 - является, 0 - нет
 */
-uint8_t OBD::IsItTernaryOperator(uint8_t byte)
+uint8_t OBD::IsItTernaryOperator(const uint8_t byte)
 {
     return (byte == OPCODE_IF_ELSE) ? 1 : 0;
 }

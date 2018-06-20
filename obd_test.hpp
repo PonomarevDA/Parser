@@ -6,9 +6,8 @@
 class TestOBD: public OBD
 {
 private:
-    /// Методы для тестирования
+    /// Метод для тестирования
     void TestCalculationReverse(int64_t needValue);
-    void TestCalculations();
 
     /// Методы иллюстрации результатов алгоритмов в терминале:
     void ShowFormula();

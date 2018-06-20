@@ -11,7 +11,7 @@ typedef signed long long int64_t;
 class OBD
 {
 public:
-    /// Коды операторов
+    /// Operator codes
     enum Opcode_t
     {
         OPCODE_LOG_OR = 0x09,		///< ||
@@ -36,17 +36,24 @@ public:
         OPCODE_IF_ELSE = 0x1C,		///< ? IF-ELSE
     };
 
-    /// Структура, хранящая байты данных фрейма
+    /// Structure that stores the data bytes of the frame
     struct Frame
     {
         Frame(uint8_t d0 = 0, uint8_t d1 = 0, uint8_t d2 = 0, uint8_t d3 = 0, uint8_t d4 = 0, uint8_t d5 = 0, uint8_t d6 = 0, uint8_t d7 = 0)
         {
-            Data[0] = d0; Data[1] = d1; Data[2] = d2; Data[3] = d3; Data[4] = d4; Data[5] = d5; Data[6] = d6; Data[7] = d7;
+            Data[0] = d0; 
+			Data[1] = d1; 
+			Data[2] = d2; 
+			Data[3] = d3; 
+			Data[4] = d4; 
+			Data[5] = d5; 
+			Data[6] = d6; 
+			Data[7] = d7;
         }
         uint8_t Data[8];
     };
 
-    /// Структура, хранящая информацию о датчиках
+    /// Table of parameters, that storing information about sensors from CanBase
     struct ParamTable_t
     {
         ParamTable_t(): FormulaLength(0), tree(32) {}	/// Конструктор
@@ -60,25 +67,25 @@ protected:
     {
         MAX_NUMBER_OF_DATA_BYTES = 4,
     };
-    /// Метод инициализации:
-    void CreateTrees();									/// Построить дерево синтаксического разбора
+    /// Method init:
+    void CreateTrees();
 
-    /// Методы выполнения алгоритма прямого/обратного расчета:
+    /// Methods for do direct/reverse calculation algorithm
     void DoDirectCalculate();
-    uint32_t DoReverseCalculateWithTree(uint32_t value, Tree::Node* node = nullptr);
-    uint8_t DoReverseCalculateWithMethodDichotomy(int64_t NeedValue);
-    uint8_t DoReverseCalculateWithBruteForce(int64_t NeedValue);
-    uint32_t CalculateDirectElementary(uint8_t opcode, uint32_t operand1, uint32_t operand2 = 0, uint32_t operand3 = 0);
-    uint32_t CalculateReverseElementary(uint32_t value, uint8_t opcode, uint32_t operand1, uint32_t operand2 = 0, uint32_t operand3 = 0);
+    uint32_t DoReverseCalculateWithTree(uint32_t value, const Tree::Node* node = nullptr);
+    uint8_t DoReverseCalculateWithMethodDichotomy(const int64_t NeedValue);
+    uint8_t DoReverseCalculateWithBruteForce(const int64_t NeedValue);
+    uint32_t CalculateDirectElementary(const uint8_t opcode, const uint32_t operand1, const uint32_t operand2 = 0, const uint32_t operand3 = 0);
+    uint32_t CalculateReverseElementary(uint32_t value, const uint8_t opcode, const uint32_t operand1, const uint32_t operand2 = 0, const uint32_t operand3 = 0);
 
-    /// Методы проверки типа байта
-    uint8_t IsItDataFrame(uint8_t byte);
-    uint8_t IsItConst(uint8_t byte);
-    uint8_t IsItOperator(uint8_t byte);
-    uint8_t IsItOperand(uint8_t byte);
-    uint8_t IsItUnaryOperator(uint8_t byte);
-    uint8_t IsItBinaryOperator(uint8_t byte);
-    uint8_t IsItTernaryOperator(uint8_t byte);
+    /// Methods for check the byte type
+    uint8_t IsItDataFrame(const uint8_t byte);
+    uint8_t IsItConst(const uint8_t byte);
+    uint8_t IsItOperator(const uint8_t byte);
+    uint8_t IsItOperand(const uint8_t byte);
+    uint8_t IsItUnaryOperator(const uint8_t byte);
+    uint8_t IsItBinaryOperator(const uint8_t byte);
+    uint8_t IsItTernaryOperator(const uint8_t byte);
 
     /// Variables:
     Stack buf;
