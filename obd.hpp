@@ -63,6 +63,13 @@ public:
         uint8_t DataBytes[4];
     };
 protected:
+	struct SensorInfo_t
+	{
+		uint32_t value;
+		Stack stack;
+		uint8_t dataFrame[8];
+		uint8_t numberInTable;
+	};
     enum
     {
         MAX_NUMBER_OF_DATA_BYTES = 4,
