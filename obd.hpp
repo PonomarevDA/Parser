@@ -56,7 +56,7 @@ public:
     /// Table of parameters, that storing information about sensors from CanBase
     struct ParamTable_t
     {
-        ParamTable_t(): FormulaLength(0), tree(32) {}	/// Конструктор
+        ParamTable_t(): FormulaLength(0), tree(32) {}
         uint8_t FormulaLength;
         uint8_t Formula[32];
         Tree tree;
@@ -88,7 +88,7 @@ protected:
     uint8_t IsItTernaryOperator(const uint8_t byte);
 
     /// Variables:
-    Stack buf;
+    Stack stack;
     ParamTable_t ParamTable[9];
     uint8_t ParamNumber;
     uint8_t ParamCount;

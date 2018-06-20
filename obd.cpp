@@ -18,7 +18,7 @@ void OBD::CreateTrees()
             if ( IsItOperand(byte) )
             {
                 Tree::Node* op = ParamTable[paramCount].tree.AddNodeLower(byte);
-                buf.Push(op);
+				stack.Push(op);
                 if ( IsItDataFrame(byte) && (dataByteCount < MAX_NUMBER_OF_DATA_BYTES) &&
                     (byte != ParamTable[paramCount].DataBytes[0]) && (ParamTable[paramCount].DataBytes[1]) &&
                     (byte != ParamTable[paramCount].DataBytes[2]) && (ParamTable[paramCount].DataBytes[3]) )
@@ -30,28 +30,28 @@ void OBD::CreateTrees()
                 {
                     uint8_t length = 1;
                     Tree::Node* ops[3];
-                    ops[0] = buf.Pop();
+                    ops[0] = stack.Pop();
                     Tree::Node* op = ParamTable[paramCount].tree.AddNodeParent(byte, ops, length);
-                    buf.Push(op);
+					stack.Push(op);
                 }
                 else if ( IsItBinaryOperator(byte) )
                 {
                     uint8_t length = 2;
                     Tree::Node* ops[3];
-                    ops[0] = buf.Pop();
-                    ops[1] = buf.Pop();
+                    ops[0] = stack.Pop();
+                    ops[1] = stack.Pop();
                     Tree::Node* op = ParamTable[paramCount].tree.AddNodeParent(byte, ops, length);
-                    buf.Push(op);
+					stack.Push(op);
                 }
                 else if ( IsItTernaryOperator(byte) )
                 {
                     uint8_t length = 3;
                     Tree::Node* ops[3];
-                    ops[0] = buf.Pop();
-                    ops[1] = buf.Pop();
-                    ops[2] = buf.Pop();
+                    ops[0] = stack.Pop();
+                    ops[1] = stack.Pop();
+                    ops[2] = stack.Pop();
                     Tree::Node* op = ParamTable[paramCount].tree.AddNodeParent(byte, ops, length);
-                    buf.Push(op);
+					stack.Push(op);
                 }
                 else
                 {
