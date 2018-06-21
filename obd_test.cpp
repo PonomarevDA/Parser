@@ -8,7 +8,6 @@
 void TestOBD::TestReverseCalculateElementary()
 {
     ParamNumber = 0;
-    ParamCount = 0;
     {// LOG_OR
         ParamTable[ParamNumber].FormulaLength = 4;
         uint8_t arr[4] = { 0x01, OPCODE_LOG_OR, 0x00, 0x85 };
@@ -43,7 +42,7 @@ void TestOBD::TestReverseCalculateElementary()
 
     int64_t needValue;
     uint8_t maxCountOfValue = 4;
-    for (ParamCount = 0; ParamCount < ParamNumber; ParamCount++)
+    for (uint8_t paramCount = 0; paramCount < ParamNumber; paramCount++)
     {
         for (uint8_t countOfValue = 0; countOfValue < maxCountOfValue; countOfValue++)
         {
@@ -55,7 +54,7 @@ void TestOBD::TestReverseCalculateElementary()
                 needValue = 11;
             else if (countOfValue == 3)
                 needValue = 40;
-            TestCalculationReverse(needValue);
+            TestCalculationReverse(needValue, paramCount);
         }
     }
 }
@@ -67,7 +66,6 @@ void TestOBD::TestReverseCalculateElementary()
 void TestOBD::TestReverseCalculateWithDifficulties()
 {
     ParamNumber = 0;
-    ParamCount = 0;
     // 0. "(d0 | (d1 << 8) | (d2 << 16) ) * 10"
     {
         ParamTable[ParamNumber].FormulaLength = 12;
@@ -137,12 +135,12 @@ void TestOBD::TestReverseCalculateWithDifficulties()
     // "( ( d4 &gt;&gt; 7 ) &amp; 1 ) &amp; ( ( ( d4 &gt;&gt; 6 ) &amp; 1 ) == 0)"
 
     int64_t needValue;
-    for (ParamCount = 0; ParamCount < ParamNumber; ParamCount++)
+    for (uint8_t paramCount = 0; paramCount < ParamNumber; paramCount++)
     {
         uint8_t maxCountOfValue;
-        if (ParamCount <= 5)
+        if (paramCount <= 5)
             maxCountOfValue = 4;
-        if (ParamCount >= 6)
+        if (paramCount >= 6)
             maxCountOfValue = 2;
 
         for (uint8_t countOfValue = 0; countOfValue < maxCountOfValue; countOfValue++)
@@ -155,7 +153,7 @@ void TestOBD::TestReverseCalculateWithDifficulties()
                 needValue = 11;
             else if (countOfValue == 3)
                 needValue = 40;
-            TestCalculationReverse(needValue);
+            TestCalculationReverse(needValue, paramCount);
         }
     }
 }
@@ -167,7 +165,6 @@ void TestOBD::TestReverseCalculateWithDifficulties()
 void TestOBD::TestReverseCalculateForAudiA3_2013()
 {
     ParamNumber = 0;
-    ParamCount = 0;
     // 0. ƒискретна€ "( d4 &amp; 1 ) == 0"
     {
         ParamTable[ParamNumber].FormulaLength = 6;
@@ -227,10 +224,10 @@ void TestOBD::TestReverseCalculateForAudiA3_2013()
     CreateTrees();
 
     int64_t needValue;
-    for (ParamCount = 0; ParamCount < ParamNumber; ParamCount++)
+    for (uint8_t paramCount = 0; paramCount < ParamNumber; paramCount++)
     {
         uint8_t maxCountOfValue = 4;
-        if ( (ParamCount == 0) || (ParamCount == 4) || (ParamCount == 5))
+        if ( (paramCount == 0) || (paramCount == 4) || (paramCount == 5))
             maxCountOfValue = 2;
         else
             maxCountOfValue = 4;
@@ -245,7 +242,7 @@ void TestOBD::TestReverseCalculateForAudiA3_2013()
                 needValue = 11;
             else if (countOfValue == 3)
                 needValue = 40;
-            TestCalculationReverse(needValue);
+            TestCalculationReverse(needValue, paramCount);
         }
     }
 }
@@ -255,22 +252,23 @@ void TestOBD::TestReverseCalculateForAudiA3_2013()
 * @brief “естирование 3-ех методов обратного решени€ задачи дл€ заданной формулы
 * @note –езультаты тестов выводит в терминал
 */
-void TestOBD::TestCalculationReverse(int64_t needValue)
+void TestOBD::TestCalculationReverse(int64_t needValue, uint8_t paramCount)
 {
-    ShowFormula();
-    ShowTree();
+    ShowFormula(paramCount);
+    ShowTree(paramCount);
+	uint8_t* ptrDataFrame;
     std::cout << "\nOutput configurator: " << needValue << "\n";
 
     std::cout << "\nReverse calculation (brut force):\n";
     std::cout << "Frame: ";
-    memset(frame.Data, 0, 8);
-    if (DoReverseCalculateWithBruteForce(needValue) == 0)
+	Calculator calc(uint32_t(needValue), paramCount, *this);
+    if (calc.DoReverseCalculateWithBruteForce(needValue) == 0)
     {
+		ptrDataFrame = calc.GetDataFrame();
         for (uint8_t count = 0; count < 8; count++)
-            std::cout << frame.Data[count] + 0 << " ";
-        Value = needValue;
-        DoDirectCalculate();
-        std::cout << "\nOutput terminal: " << Value << "\n";
+            std::cout << ptrDataFrame[count] + 0 << " ";
+        calc.DoDirectCalculate();
+        std::cout << "\nOutput terminal: " << calc.GetValue() << "\n";
     }
     else
         std::cout << "There is no match!\n";
@@ -278,24 +276,23 @@ void TestOBD::TestCalculationReverse(int64_t needValue)
 
     std::cout << "\nReverse calculation (tree):\n";
     std::cout << "Frame: ";
-    memset(frame.Data, 0, 8);
-    DoReverseCalculateWithTree(needValue);
+	calc.PutValue(needValue);
+    calc.DoReverseCalculateWithTree(needValue);
+	ptrDataFrame = calc.GetDataFrame();
     for (uint8_t count = 0; count < 8; count++)
-        std::cout << frame.Data[count] + 0 << " ";
-    Value = needValue;
-    DoDirectCalculate();
-    std::cout << "\nOutput terminal: " << Value << "\n";
+		std::cout << ptrDataFrame[count] + 0 << " ";
+	calc.DoDirectCalculate();
+    std::cout << "\nOutput terminal: " << calc.GetValue() << "\n";
 
     std::cout << "\nReverse calculation (method dichotomy):\n";
     std::cout << "Frame: ";
-    memset(frame.Data, 0, 8);
-    if (DoReverseCalculateWithMethodDichotomy(needValue) == 0)
+    if (calc.DoReverseCalculateWithMethodDichotomy(needValue) == 0)
     {
-        for (uint8_t count = 0; count < 8; count++)
-            std::cout << frame.Data[count] + 0 << " ";
-        Value = needValue;
-        DoDirectCalculate();
-        std::cout << "\nOutput terminal: " << Value << "\n";
+		ptrDataFrame = calc.GetDataFrame();
+		for (uint8_t count = 0; count < 8; count++)
+			std::cout << ptrDataFrame[count] + 0 << " ";
+		calc.DoDirectCalculate();
+		std::cout << "\nOutput terminal: " << calc.GetValue() << "\n";
     }
     else
         std::cout << "Out of time!\n";
@@ -305,13 +302,13 @@ void TestOBD::TestCalculationReverse(int64_t needValue)
 /*
 * @brief ¬ыводит в терминал формулу, полученную из конфигуратора
 */
-void TestOBD::ShowFormula()
+void TestOBD::ShowFormula(uint8_t paramCount)
 {
-    std::cout << "\nFormula[" << ParamCount + 0 << "]: " << std::endl;
-    std::cout << "Length = " << ParamTable[ParamCount].FormulaLength + 0 << std::endl;
-    for (uint8_t countOfByte = 1; countOfByte < ParamTable[ParamCount].FormulaLength; countOfByte++)
+    std::cout << "\nFormula[" << paramCount + 0 << "]: " << std::endl;
+    std::cout << "Length = " << ParamTable[paramCount].FormulaLength + 0 << std::endl;
+    for (uint8_t countOfByte = 1; countOfByte < ParamTable[paramCount].FormulaLength; countOfByte++)
     {
-        uint8_t byte = ParamTable[ParamCount].Formula[countOfByte];
+        uint8_t byte = ParamTable[paramCount].Formula[countOfByte];
         ShowByte(byte);
     }
 }
@@ -352,9 +349,9 @@ void TestOBD::ShowByte(uint8_t byte)
 /*
 * @brief ¬ыводит в терминал операторы дерева, начина€ с верхнего узла, если возможно
 */
-void TestOBD::ShowTree()
+void TestOBD::ShowTree(uint8_t paramCount)
 {
-    Tree::Node* ptrNode = ParamTable[ParamCount].tree.GetBaseNode();
+    Tree::Node* ptrNode = ParamTable[paramCount].tree.GetBaseNode();
     std::cout << std::endl << "Tree:" << std::endl;
     if (ptrNode != nullptr)
     {
@@ -372,7 +369,7 @@ void TestOBD::ShowTreeNode(Tree::Node* ptrNode)
 {
     if (ptrNode != nullptr)
     {
-        if (IsItOperator(ptrNode->Value))
+        if ( ((ptrNode->Value >= 0x08) && (ptrNode->Value < 0x80)) )
         {
             ShowByte(ptrNode->Value);
             ShowTreeNode(ptrNode->ChildsArr[0]);

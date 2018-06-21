@@ -7,12 +7,12 @@ class TestOBD: public OBD
 {
 private:
     /// Метод для тестирования
-    void TestCalculationReverse(int64_t needValue);
+    void TestCalculationReverse(int64_t needValue, uint8_t paramCount);
 
     /// Методы иллюстрации результатов алгоритмов в терминале:
-    void ShowFormula();
+    void ShowFormula(uint8_t paramCount);
     void ShowByte(uint8_t byte);
-    void ShowTree();
+    void ShowTree(uint8_t paramCount);
     void ShowTreeNode(Tree::Node*);
 public:
     /// Тестовые кейсы

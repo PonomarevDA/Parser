@@ -2,12 +2,22 @@
 #include "cstring"  // for memcpy
 #include <iostream> // types
 
+/// Declarations
+uint8_t IsItDataFrame(const uint8_t byte);
+uint8_t IsItConst(const uint8_t byte);
+uint8_t IsItOperator(const uint8_t byte);
+uint8_t IsItOperand(const uint8_t byte);
+uint8_t IsItUnaryOperator(const uint8_t byte);
+uint8_t IsItBinaryOperator(const uint8_t byte);
+uint8_t IsItTernaryOperator(const uint8_t byte);
+
 
 /*
 * @brief Построить деревья для синтаксического анализа
 */
 void OBD::CreateTrees()
 {
+	Stack stack;
     for (uint8_t paramCount = 0; paramCount < ParamNumber; paramCount++)
     {
         uint8_t dataByteCount = 0;
@@ -63,14 +73,56 @@ void OBD::CreateTrees()
     }
 }
 
+/*
+* @brief Конструктор
+* @param value - число из конфигуратора
+* @param paramNum - номер параметра из таблицы
+* @param obd - ссылка на оъект OBD, из которого будет взят указатель на нужные данные
+*/
+Calculator::Calculator(uint32_t value, uint8_t paramNum, OBD& obd):
+	Value(value)
+{
+	ptrParamTable = &( obd.ParamTable[paramNum] );
+}
+
+
+/*
+* @brief Получить данные фрейма
+* @return указатель на массив из 8-и байт данных фрейма
+*/
+uint8_t* Calculator::GetDataFrame()
+{
+	return DataFrame;
+}
+
+
+/*
+* @brief Получить данные фрейма
+* @return указатель на массив из 8-и байт данных фрейма
+*/
+uint32_t Calculator::GetValue()
+{
+	return Value;
+}
+
+
+/*
+* @brief Внести число из конфигуратора
+* @return указатель на массив из 8-и байт данных фрейма
+*/
+void Calculator::PutValue(uint32_t value)
+{
+	Value = value;
+}
+
 
 /*
 * @brief Выполнение прямого расчета по формуле
 * @note скопировано из терминала
 */
-void OBD::DoDirectCalculate()
+void Calculator::DoDirectCalculate()
 {
-    uint8_t param = ParamCount;
+	Value = 0;
     uint8_t operators[16];
     uint32_t operands[16];
     int8_t operatorIndex = -1;
@@ -78,14 +130,14 @@ void OBD::DoDirectCalculate()
 
     bool ignore = false;
 
-    for (uint8_t index = ParamTable[param].FormulaLength - 1; index >= 1; index--)
+    for (uint8_t index = ptrParamTable->FormulaLength - 1; index >= 1; index--)
     {
-        uint8_t byte = ParamTable[param].Formula[index];
+        uint8_t byte = ptrParamTable->Formula[index];
 
         /// Если байт данных фрейма
         if (byte < 8)
         {
-            operands[++operandIndex] = frame.Data[byte];
+            operands[++operandIndex] = DataFrame[byte];
         }
         /// Если оператор
         else if ((byte >= 8) && (byte <= 127))
@@ -137,7 +189,7 @@ void OBD::DoDirectCalculate()
 * @param value - результат выполнения прямого расчета указанного узла (оператора)
 * @return value - рассчитанное число
 */
-uint32_t OBD::DoReverseCalculateWithTree(uint32_t value, const Tree::Node* node)
+uint32_t Calculator::DoReverseCalculateWithTree(uint32_t value, const Tree::Node* node)
 {
     enum: uint8_t
     {
@@ -146,7 +198,7 @@ uint32_t OBD::DoReverseCalculateWithTree(uint32_t value, const Tree::Node* node)
         BASE_IS_NULL = 2,
         UNEXPECTED_ERROR = 255,
     };
-    Tree::Node* base = ParamTable[ParamCount].tree.GetBaseNode();
+    Tree::Node* base = ptrParamTable->tree.GetBaseNode();
     static uint8_t status = OK;
 
     /// 0. Check correctness:
@@ -154,6 +206,7 @@ uint32_t OBD::DoReverseCalculateWithTree(uint32_t value, const Tree::Node* node)
     {
         if (base == nullptr)
             return BASE_IS_NULL;
+		memset(DataFrame, 0x00, 8);	/// заполняем массив нулями
         node = base;
         status = OK;
     }
@@ -165,7 +218,7 @@ uint32_t OBD::DoReverseCalculateWithTree(uint32_t value, const Tree::Node* node)
     {
         if ((node == base) && IsItDataFrame(node->Value) )
         {
-            frame.Data[node->Value] = value;
+            DataFrame[node->Value] = value;
         }
         else
         {
@@ -232,17 +285,18 @@ uint32_t OBD::DoReverseCalculateWithTree(uint32_t value, const Tree::Node* node)
 * @param needValue - число, которое должен распарсить терминал
 * @return статус выполнения: 0 - все хорошо, иначе ошибка
 */
-uint8_t OBD::DoReverseCalculateWithBruteForce(const int64_t needValue)
+uint8_t Calculator::DoReverseCalculateWithBruteForce(const int64_t needValue)
 {
     enum : uint8_t
     {
         OK = 0,
         ERROR = 1,
     };
-    uint8_t indexByte0 = ParamTable[ParamCount].DataBytes[0];
-    uint8_t indexByte1 = ParamTable[ParamCount].DataBytes[1];
-    uint8_t indexByte2 = ParamTable[ParamCount].DataBytes[2];
-    uint8_t indexByte3 = ParamTable[ParamCount].DataBytes[3];
+	memset(DataFrame, 0x00, 8);	/// заполняем массив нулями
+    uint8_t indexByte0 = ptrParamTable->DataBytes[0];
+    uint8_t indexByte1 = ptrParamTable->DataBytes[1];
+    uint8_t indexByte2 = ptrParamTable->DataBytes[2];
+    uint8_t indexByte3 = ptrParamTable->DataBytes[3];
 
     if( IsItDataFrame(indexByte3) )
         return ERROR;
@@ -253,16 +307,16 @@ uint8_t OBD::DoReverseCalculateWithBruteForce(const int64_t needValue)
     uint16_t valueByte3 = ( IsItDataFrame(indexByte3) ) ? 0 : 255;
     while (valueByte3 < 256)
     {
-        frame.Data[indexByte3] = (uint8_t)valueByte3;
+        DataFrame[indexByte3] = (uint8_t)valueByte3;
         while (valueByte2 < 256)
         {
-            frame.Data[indexByte2] = (uint8_t)valueByte2;
+			DataFrame[indexByte2] = (uint8_t)valueByte2;
             while (valueByte1 < 256)
             {
-                frame.Data[indexByte1] = (uint8_t)valueByte1;
+				DataFrame[indexByte1] = (uint8_t)valueByte1;
                 while (valueByte0 < 256)
                 {
-                    frame.Data[indexByte0] = (uint8_t)valueByte0;
+					DataFrame[indexByte0] = (uint8_t)valueByte0;
                     DoDirectCalculate();
                     if (Value == needValue)
                         return OK;
@@ -288,7 +342,7 @@ uint8_t OBD::DoReverseCalculateWithBruteForce(const int64_t needValue)
 * @param NeedValue - число, которое должен распарсить терминал
 * @return статус выполнения: 0 - все хорошо, иначе ошибка
 */
-uint8_t OBD::DoReverseCalculateWithMethodDichotomy(const int64_t NeedValue)
+uint8_t Calculator::DoReverseCalculateWithMethodDichotomy(const int64_t NeedValue)
 {
     enum : uint8_t
     {
@@ -297,43 +351,44 @@ uint8_t OBD::DoReverseCalculateWithMethodDichotomy(const int64_t NeedValue)
     };
 
     /// Init variables
+	memset(DataFrame, 0x00, 8);	/// заполняем массив нулями
     uint32_t dataMinBorder = 0;
     uint32_t dataMaxBorder;
     uint32_t dataGuess;
     uint8_t counter = 0;
-    uint8_t indexByte0 = ParamTable[ParamCount].DataBytes[0];
-    uint8_t indexByte1 = ParamTable[ParamCount].DataBytes[1];
-    uint8_t indexByte2 = ParamTable[ParamCount].DataBytes[2];
-    uint8_t indexByte3 = ParamTable[ParamCount].DataBytes[3];
+    uint8_t indexByte0 = ptrParamTable->DataBytes[0];
+    uint8_t indexByte1 = ptrParamTable->DataBytes[1];
+    uint8_t indexByte2 = ptrParamTable->DataBytes[2];
+    uint8_t indexByte3 = ptrParamTable->DataBytes[3];
     if (IsItDataFrame(indexByte3))
     {
         dataMaxBorder = 4294967295;	/// 2^32 - 1
         dataGuess = 2147483648;		/// 2^31
-        frame.Data[indexByte3] = (dataGuess >> 24) % 256;
-        frame.Data[indexByte2] = (dataGuess >> 16) % 256;
-        frame.Data[indexByte1] = (dataGuess >> 8) % 256;
-        frame.Data[indexByte0] = dataGuess % 256;
+        DataFrame[indexByte3] = (dataGuess >> 24) % 256;
+		DataFrame[indexByte2] = (dataGuess >> 16) % 256;
+		DataFrame[indexByte1] = (dataGuess >> 8) % 256;
+		DataFrame[indexByte0] = dataGuess % 256;
     }
     else if (IsItDataFrame(indexByte2))
     {
         dataMaxBorder = 16777215;	/// 2^24 - 1
         dataGuess = 8388608;		/// 2^24
-        frame.Data[indexByte2] = (dataGuess >> 16) % 256;
-        frame.Data[indexByte1] = (dataGuess >> 8) % 256;
-        frame.Data[indexByte0] = dataGuess % 256;
+        DataFrame[indexByte2] = (dataGuess >> 16) % 256;
+		DataFrame[indexByte1] = (dataGuess >> 8) % 256;
+		DataFrame[indexByte0] = dataGuess % 256;
     }
     else if (IsItDataFrame(indexByte1))
     {
         dataMaxBorder = 65535;		/// 2^16 - 1
         dataGuess = 32769;			/// 2^16
-        frame.Data[indexByte1] = (dataGuess >> 8) % 256;
-        frame.Data[indexByte0] = dataGuess % 256;
+		DataFrame[indexByte1] = (dataGuess >> 8) % 256;
+		DataFrame[indexByte0] = dataGuess % 256;
     }
     else if (IsItDataFrame(indexByte0))
     {
         dataMaxBorder = 255;		/// 2^8 - 1
         dataGuess = 128;			/// 2^7
-        frame.Data[indexByte0] = dataGuess;
+		DataFrame[indexByte0] = dataGuess;
     }
     else
         return ERROR;
@@ -355,10 +410,10 @@ uint8_t OBD::DoReverseCalculateWithMethodDichotomy(const int64_t NeedValue)
             dataMinBorder = dataGuess;
             dataGuess = ((dataMaxBorder + dataMinBorder) >> 1) + 1;	// round upwards
         }
-        frame.Data[indexByte0] = dataGuess % 256;
-        frame.Data[indexByte1] = (dataGuess >> 8) % 256;
-        frame.Data[indexByte2] = (dataGuess >> 16) % 256;
-        frame.Data[indexByte3] = (dataGuess >> 24) % 256;
+		DataFrame[indexByte0] = dataGuess % 256;
+		DataFrame[indexByte1] = (dataGuess >> 8) % 256;
+		DataFrame[indexByte2] = (dataGuess >> 16) % 256;
+		DataFrame[indexByte3] = (dataGuess >> 24) % 256;
         DoDirectCalculate();
 
         /// Verification in case this method gets stuck
@@ -381,7 +436,7 @@ uint8_t OBD::DoReverseCalculateWithMethodDichotomy(const int64_t NeedValue)
 * @param operand3 - второй оператор, если есть
 * @return - результат расчета выражения
 */
-uint32_t OBD::CalculateDirectElementary(const uint8_t opcode, const uint32_t operand1, const uint32_t operand2, const uint32_t operand3)
+uint32_t Calculator::CalculateDirectElementary(const uint8_t opcode, const uint32_t operand1, const uint32_t operand2, const uint32_t operand3)
 {
     if (opcode == OPCODE_LOG_OR)			return operand1 || operand2;
     else if (opcode == OPCODE_LOG_AND)		return operand1 && operand2;
@@ -427,7 +482,7 @@ uint32_t OBD::CalculateDirectElementary(const uint8_t opcode, const uint32_t ope
 * @note Предполагается, что хотя бы 1 из аргументов константа или байт данных фрейма
 * @return partOfUnknownOperand - незивестный операнд
 */
-uint32_t OBD::CalculateReverseElementary(uint32_t value, const uint8_t opcode, const uint32_t operand1, const uint32_t operand2, const uint32_t operand3)
+uint32_t Calculator::CalculateReverseElementary(uint32_t value, const uint8_t opcode, const uint32_t operand1, const uint32_t operand2, const uint32_t operand3)
 {
     uint32_t unknownValue = 0;
 
@@ -475,16 +530,16 @@ uint32_t OBD::CalculateReverseElementary(uint32_t value, const uint8_t opcode, c
             if ( opcode == OPCODE_EQU ) /// для "==" заполняем особенным образом
             {
                 if (IsItDataFrame(operand1))
-                    frame.Data[operand1] = unknownValue;
+                    DataFrame[operand1] = unknownValue;
                 else if (IsItDataFrame(operand2))
-                    frame.Data[operand2] = unknownValue;
+					DataFrame[operand2] = unknownValue;
             }
             else
             {
                 if (IsItDataFrame(operand1))
-                    frame.Data[operand1] |= unknownValue;
+					DataFrame[operand1] |= unknownValue;
                 else if (IsItDataFrame(operand2))
-                    frame.Data[operand2] |= unknownValue;
+					DataFrame[operand2] |= unknownValue;
             }
         }
 
@@ -497,11 +552,11 @@ uint32_t OBD::CalculateReverseElementary(uint32_t value, const uint8_t opcode, c
             unknownValue = value;
 
             /// 2.2. Заполнение байт данных фрейма предполагаемыми значениями
-            if (opcode == OPCODE_LOG_OR)            frame.Data[byteFrameCount] = (value) ? 1 : 0;
-            else if (opcode == OPCODE_LOG_AND)      frame.Data[byteFrameCount] = (value) ? 1 : 0;
-            else if (opcode == OPCODE_BIT_OR)       frame.Data[byteFrameCount] = uint8_t(value);
+            if (opcode == OPCODE_LOG_OR)            DataFrame[byteFrameCount] = (value) ? 1 : 0;
+            else if (opcode == OPCODE_LOG_AND)      DataFrame[byteFrameCount] = (value) ? 1 : 0;
+            else if (opcode == OPCODE_BIT_OR)       DataFrame[byteFrameCount] = uint8_t(value);
             else if (opcode == OPCODE_BIT_XOR)      {/*TODO*/}
-            else if (opcode == OPCODE_BIT_AND)      frame.Data[byteFrameCount] = uint8_t(value);
+            else if (opcode == OPCODE_BIT_AND)      DataFrame[byteFrameCount] = uint8_t(value);
             else
                 return 0;
         }
@@ -528,7 +583,7 @@ uint32_t OBD::CalculateReverseElementary(uint32_t value, const uint8_t opcode, c
 * @param byte - байт для рассмотрения
 * @return 1 - является, 0 - нет
 */
-uint8_t OBD::IsItDataFrame(const uint8_t byte)
+uint8_t IsItDataFrame(const uint8_t byte)
 {
     return (byte < 0x08) ? 1 : 0;
 }
@@ -539,7 +594,7 @@ uint8_t OBD::IsItDataFrame(const uint8_t byte)
 * @param byte - байт для рассмотрения
 * @return 1 - является, 0 - нет
 */
-uint8_t OBD::IsItConst(const uint8_t byte)
+uint8_t IsItConst(const uint8_t byte)
 {
     return (byte >= 0x80) ? 1 : 0;
 }
@@ -550,7 +605,7 @@ uint8_t OBD::IsItConst(const uint8_t byte)
 * @param byte - байт для рассмотрения
 * @return 1 - является, 0 - нет
 */
-uint8_t OBD::IsItOperator(const uint8_t byte)
+uint8_t IsItOperator(const uint8_t byte)
 {
     return ((byte >= 0x08) && (byte < 0x80)) ? 1 : 0;
 }
@@ -561,7 +616,7 @@ uint8_t OBD::IsItOperator(const uint8_t byte)
 * @param byte - байт для рассмотрения
 * @return 1 - является, 0 - нет
 */
-uint8_t OBD::IsItOperand(const uint8_t byte)
+uint8_t IsItOperand(const uint8_t byte)
 {
     return ((byte < 0x08) || (byte >= 0x80)) ? 1 : 0;
 }
@@ -572,7 +627,7 @@ uint8_t OBD::IsItOperand(const uint8_t byte)
 * @param byte - байт для рассмотрения
 * @return 1 - является, 0 - нет
 */
-uint8_t OBD::IsItUnaryOperator(const uint8_t byte)
+uint8_t IsItUnaryOperator(const uint8_t byte)
 {
     return ( (byte == OPCODE_LOG_NOT) || (byte == OPCODE_BIT_NOT) )? 1 : 0;
 }
@@ -583,7 +638,7 @@ uint8_t OBD::IsItUnaryOperator(const uint8_t byte)
 * @param byte - байт для рассмотрения
 * @return 1 - является, 0 - нет
 */
-uint8_t OBD::IsItBinaryOperator(const uint8_t byte)
+uint8_t IsItBinaryOperator(const uint8_t byte)
 {
     return ( (byte == OPCODE_LOG_OR) || (byte == OPCODE_LOG_AND) || ( (byte >= OPCODE_BIT_OR) && (byte <= OPCODE_DIV) ) ) ? 1 : 0;
 }
@@ -594,7 +649,7 @@ uint8_t OBD::IsItBinaryOperator(const uint8_t byte)
 * @param byte - байт для рассмотрения
 * @return 1 - является, 0 - нет
 */
-uint8_t OBD::IsItTernaryOperator(const uint8_t byte)
+uint8_t IsItTernaryOperator(const uint8_t byte)
 {
     return (byte == OPCODE_IF_ELSE) ? 1 : 0;
 }
