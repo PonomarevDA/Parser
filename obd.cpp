@@ -63,26 +63,14 @@ void OBD::CreateTrees()
                     Tree::Node* op = ParamTable[paramCount].tree.AddNodeParent(byte, ops, length);
 					stack.Push(op);
                 }
-                else
+                else // error byte in CanBase
                 {
-
+					/*error handler, if need*/
                 }
 
             }
         }
     }
-}
-
-/*
-* @brief Конструктор
-* @param value - число из конфигуратора
-* @param paramNum - номер параметра из таблицы
-* @param obd - ссылка на оъект OBD, из которого будет взят указатель на нужные данные
-*/
-Calculator::Calculator(uint32_t value, uint8_t paramNum, OBD& obd):
-	Value(value)
-{
-	ptrParamTable = &( obd.ParamTable[paramNum] );
 }
 
 
@@ -92,7 +80,7 @@ Calculator::Calculator(uint32_t value, uint8_t paramNum, OBD& obd):
 */
 uint8_t* Calculator::GetDataFrame()
 {
-	return DataFrame;
+	return ptrParam->LastDataFrame;
 }
 
 
@@ -118,11 +106,11 @@ void Calculator::PutValue(uint32_t value)
 
 /*
 * @brief Выполнение прямого расчета по формуле
-* @note скопировано из терминала
+* @note скопировано из терминала и немного изменен
+* @return value - результат расчета
 */
-void Calculator::DoDirectCalculate()
+uint32_t Calculator::DoDirectCalculate()
 {
-	Value = 0;
     uint8_t operators[16];
     uint32_t operands[16];
     int8_t operatorIndex = -1;
@@ -130,14 +118,14 @@ void Calculator::DoDirectCalculate()
 
     bool ignore = false;
 
-    for (uint8_t index = ptrParamTable->FormulaLength - 1; index >= 1; index--)
+    for (uint8_t index = ptrParam->FormulaLength - 1; index >= 1; index--)
     {
-        uint8_t byte = ptrParamTable->Formula[index];
+        uint8_t byte = ptrParam->Formula[index];
 
         /// Если байт данных фрейма
         if (byte < 8)
         {
-            operands[++operandIndex] = DataFrame[byte];
+            operands[++operandIndex] = ptrParam->LastDataFrame[byte];
         }
         /// Если оператор
         else if ((byte >= 8) && (byte <= 127))
@@ -181,48 +169,66 @@ void Calculator::DoDirectCalculate()
         }
     }
     Value = operands[0];
+	return operands[0];
 }
 
 
 /*
-* @brief Выполнить попытку рекурсивного обратного расчета с помощью дерева
-* @param value - результат выполнения прямого расчета указанного узла (оператора)
-* @return value - рассчитанное число
+* @brief Инициализация данных и попытка рекурсивного расчета
+* @param value - число, заданное в конфигураторе
+* @param paramNum - номер параметра из таблицы параметров
+* @param obd - ссылка на экземпляр класса OBD (нужен доступ к paramTable)
+* @return Status - статус расчета: 0, если расчет выполнен
 */
-uint32_t Calculator::DoReverseCalculateWithTree(uint32_t value, const Tree::Node* node)
+uint8_t Calculator::DoReverseCalculateWithTree(uint32_t value, uint8_t paramNum, OBD& obd)
 {
-    enum: uint8_t
-    {
-        OK = 0,
-        FORMULA_ERROR_NODE_IS_OPERAND = 1,
-        BASE_IS_NULL = 2,
-        UNEXPECTED_ERROR = 255,
-    };
-    Tree::Node* base = ptrParamTable->tree.GetBaseNode();
-    static uint8_t status = OK;
+	// Init
+	ptrParam = &(obd.ParamTable[paramNum]);
+	
+	// Main recursive algorithm
+	CalculateReverseWithTree(value);
+
+	// Вернуть статус результата расчета
+	return Status;
+}
+
+/*
+* @brief Выполнить попытку рекурсивного обратного расчета с помощью дерева
+* @param value - число для для выполнения обратного расчета
+* @return value - число после выполнния обратного расчета (в общем случае должно совпадать с аргументом)
+*/
+uint32_t Calculator::CalculateReverseWithTree(uint32_t value, const Tree::Node* node)
+{
+    Tree::Node* base = ptrParam->tree.GetBaseNode();
 
     /// 0. Check correctness:
     if (node == nullptr)
     {
         if (base == nullptr)
-            return BASE_IS_NULL;
-		memset(DataFrame, 0x00, 8);	/// заполняем массив нулями
+		{
+			Status = BASE_IS_NULL;
+			return 0;
+		}
+            
+		memset(ptrParam->LastDataFrame, 0x00, 8);	/// заполняем массив нулями
         node = base;
-        status = OK;
+        Status = OK;
     }
-    if (status != OK)
-        return 0;
+    if (Status != OK)
+	{
+		return 0;
+	}
 
     /// 1. If this node is OPERAND => this node is apex (висячая вершина)
     if (node->ChildsCount == 0)
     {
         if ((node == base) && IsItDataFrame(node->Value) )
         {
-            DataFrame[node->Value] = value;
+			ptrParam->LastDataFrame[node->Value] = value;
         }
         else
         {
-            status = FORMULA_ERROR_NODE_IS_OPERAND;
+            Status = FORMULA_ERROR_NODE_IS_OPERAND;
         }
     }
     /// 2. If this node is UNARY OPERATOR, try to calculate it
@@ -236,7 +242,7 @@ uint32_t Calculator::DoReverseCalculateWithTree(uint32_t value, const Tree::Node
         }
         else /// ( IsItOperator(childByte) )
         {
-            value = DoReverseCalculateWithTree(value, node->ChildsArr[0]);
+            value = CalculateReverseWithTree(value, node->ChildsArr[0]);
         }
     }
     /// 3. If this node is BINARY OPERATOR, try to calculate it
@@ -255,14 +261,14 @@ uint32_t Calculator::DoReverseCalculateWithTree(uint32_t value, const Tree::Node
         {
             value = CalculateReverseElementary(value, node->Value, operand1, operand2);
             if ( IsItOperator(operand1) )
-                value = DoReverseCalculateWithTree(value, node->ChildsArr[0]);
+                value = CalculateReverseWithTree(value, node->ChildsArr[0]);
             else if( IsItOperator(operand2) )
-                value = DoReverseCalculateWithTree(value, node->ChildsArr[1]);
+                value = CalculateReverseWithTree(value, node->ChildsArr[1]);
         }
         else if ( IsItOperator(operand1) && IsItOperator(operand2) )
         {
-            operand1 = DoReverseCalculateWithTree(value, node->ChildsArr[0]);
-            operand2 = DoReverseCalculateWithTree(value, node->ChildsArr[1]);
+            operand1 = CalculateReverseWithTree(value, node->ChildsArr[0]);
+            operand2 = CalculateReverseWithTree(value, node->ChildsArr[1]);
             value = CalculateDirectElementary(value, node->Value, operand1, operand2);
         }
     }
@@ -273,7 +279,7 @@ uint32_t Calculator::DoReverseCalculateWithTree(uint32_t value, const Tree::Node
     }
     /// 5. Если текущий узел - не пойми что
     else
-        status = UNEXPECTED_ERROR;
+        Status = UNEXPECTED_ERROR;
     return value;
 }
 
@@ -281,22 +287,28 @@ uint32_t Calculator::DoReverseCalculateWithTree(uint32_t value, const Tree::Node
 /*
 * @brief Обратный расчет с помощью метода перебора
 * @note Может выполняться очень долго (до получаса при 4 байтах),
-* поэтому при 4-ех байтах возвращаем ошибку
-* @param needValue - число, которое должен распарсить терминал
+* поэтому при 4-ех байтах сразу же возвращаем ошибку
+* @param value - число, заданное в конфигураторе
+* @param paramNum - номер параметра из таблицы параметров
+* @param obd - ссылка на экземпляр класса OBD (нужен доступ к paramTable)
 * @return статус выполнения: 0 - все хорошо, иначе ошибка
 */
-uint8_t Calculator::DoReverseCalculateWithBruteForce(const int64_t needValue)
+uint8_t Calculator::DoReverseCalculateWithBruteForce(const uint32_t value, const uint8_t paramNum, OBD& obd)
 {
+	// Init
+	ptrParam = &(obd.ParamTable[paramNum]);
+
+	// Main algorithm
     enum : uint8_t
     {
         OK = 0,
         ERROR = 1,
     };
-	memset(DataFrame, 0x00, 8);	/// заполняем массив нулями
-    uint8_t indexByte0 = ptrParamTable->DataBytes[0];
-    uint8_t indexByte1 = ptrParamTable->DataBytes[1];
-    uint8_t indexByte2 = ptrParamTable->DataBytes[2];
-    uint8_t indexByte3 = ptrParamTable->DataBytes[3];
+	memset(ptrParam->LastDataFrame, 0x00, 8);		// заполняем массив нулями
+    uint8_t indexByte0 = ptrParam->DataBytes[0];
+    uint8_t indexByte1 = ptrParam->DataBytes[1];
+    uint8_t indexByte2 = ptrParam->DataBytes[2];
+    uint8_t indexByte3 = ptrParam->DataBytes[3];
 
     if( IsItDataFrame(indexByte3) )
         return ERROR;
@@ -307,18 +319,18 @@ uint8_t Calculator::DoReverseCalculateWithBruteForce(const int64_t needValue)
     uint16_t valueByte3 = ( IsItDataFrame(indexByte3) ) ? 0 : 255;
     while (valueByte3 < 256)
     {
-        DataFrame[indexByte3] = (uint8_t)valueByte3;
+		ptrParam->LastDataFrame[indexByte3] = (uint8_t)valueByte3;
         while (valueByte2 < 256)
         {
-			DataFrame[indexByte2] = (uint8_t)valueByte2;
+			ptrParam->LastDataFrame[indexByte2] = (uint8_t)valueByte2;
             while (valueByte1 < 256)
             {
-				DataFrame[indexByte1] = (uint8_t)valueByte1;
+				ptrParam->LastDataFrame[indexByte1] = (uint8_t)valueByte1;
                 while (valueByte0 < 256)
                 {
-					DataFrame[indexByte0] = (uint8_t)valueByte0;
+					ptrParam->LastDataFrame[indexByte0] = (uint8_t)valueByte0;
                     DoDirectCalculate();
-                    if (Value == needValue)
+                    if (Value == value)
                         return OK;
                     valueByte0++;
                 }
@@ -342,7 +354,7 @@ uint8_t Calculator::DoReverseCalculateWithBruteForce(const int64_t needValue)
 * @param NeedValue - число, которое должен распарсить терминал
 * @return статус выполнения: 0 - все хорошо, иначе ошибка
 */
-uint8_t Calculator::DoReverseCalculateWithMethodDichotomy(const int64_t NeedValue)
+uint8_t Calculator::DoReverseCalculateWithMethodDichotomy(const uint32_t value, const uint8_t paramNum, OBD& obd)
 {
     enum : uint8_t
     {
@@ -351,53 +363,55 @@ uint8_t Calculator::DoReverseCalculateWithMethodDichotomy(const int64_t NeedValu
     };
 
     /// Init variables
-	memset(DataFrame, 0x00, 8);	/// заполняем массив нулями
+	ptrParam = &(obd.ParamTable[paramNum]);
+
+	memset(ptrParam->LastDataFrame, 0x00, 8);	/// заполняем массив нулями
     uint32_t dataMinBorder = 0;
     uint32_t dataMaxBorder;
     uint32_t dataGuess;
     uint8_t counter = 0;
-    uint8_t indexByte0 = ptrParamTable->DataBytes[0];
-    uint8_t indexByte1 = ptrParamTable->DataBytes[1];
-    uint8_t indexByte2 = ptrParamTable->DataBytes[2];
-    uint8_t indexByte3 = ptrParamTable->DataBytes[3];
+    uint8_t indexByte0 = ptrParam->DataBytes[0];
+    uint8_t indexByte1 = ptrParam->DataBytes[1];
+    uint8_t indexByte2 = ptrParam->DataBytes[2];
+    uint8_t indexByte3 = ptrParam->DataBytes[3];
     if (IsItDataFrame(indexByte3))
     {
         dataMaxBorder = 4294967295;	/// 2^32 - 1
         dataGuess = 2147483648;		/// 2^31
-        DataFrame[indexByte3] = (dataGuess >> 24) % 256;
-		DataFrame[indexByte2] = (dataGuess >> 16) % 256;
-		DataFrame[indexByte1] = (dataGuess >> 8) % 256;
-		DataFrame[indexByte0] = dataGuess % 256;
+		ptrParam->LastDataFrame[indexByte3] = (dataGuess >> 24) % 256;
+		ptrParam->LastDataFrame[indexByte2] = (dataGuess >> 16) % 256;
+		ptrParam->LastDataFrame[indexByte1] = (dataGuess >> 8) % 256;
+		ptrParam->LastDataFrame[indexByte0] = dataGuess % 256;
     }
     else if (IsItDataFrame(indexByte2))
     {
         dataMaxBorder = 16777215;	/// 2^24 - 1
         dataGuess = 8388608;		/// 2^24
-        DataFrame[indexByte2] = (dataGuess >> 16) % 256;
-		DataFrame[indexByte1] = (dataGuess >> 8) % 256;
-		DataFrame[indexByte0] = dataGuess % 256;
+		ptrParam->LastDataFrame[indexByte2] = (dataGuess >> 16) % 256;
+		ptrParam->LastDataFrame[indexByte1] = (dataGuess >> 8) % 256;
+		ptrParam->LastDataFrame[indexByte0] = dataGuess % 256;
     }
     else if (IsItDataFrame(indexByte1))
     {
         dataMaxBorder = 65535;		/// 2^16 - 1
         dataGuess = 32769;			/// 2^16
-		DataFrame[indexByte1] = (dataGuess >> 8) % 256;
-		DataFrame[indexByte0] = dataGuess % 256;
+		ptrParam->LastDataFrame[indexByte1] = (dataGuess >> 8) % 256;
+		ptrParam->LastDataFrame[indexByte0] = dataGuess % 256;
     }
     else if (IsItDataFrame(indexByte0))
     {
         dataMaxBorder = 255;		/// 2^8 - 1
         dataGuess = 128;			/// 2^7
-		DataFrame[indexByte0] = dataGuess;
+		ptrParam->LastDataFrame[indexByte0] = dataGuess;
     }
     else
         return ERROR;
 
     /// Main algorithm
     DoDirectCalculate();
-    while (Value != NeedValue)
+    while (Value != value)
     {
-        int64_t dif = Value - NeedValue;
+        int64_t dif = Value - value;
         /// If the desired number on the left
         if (dif > 0)
         {
@@ -410,10 +424,10 @@ uint8_t Calculator::DoReverseCalculateWithMethodDichotomy(const int64_t NeedValu
             dataMinBorder = dataGuess;
             dataGuess = ((dataMaxBorder + dataMinBorder) >> 1) + 1;	// round upwards
         }
-		DataFrame[indexByte0] = dataGuess % 256;
-		DataFrame[indexByte1] = (dataGuess >> 8) % 256;
-		DataFrame[indexByte2] = (dataGuess >> 16) % 256;
-		DataFrame[indexByte3] = (dataGuess >> 24) % 256;
+		ptrParam->LastDataFrame[indexByte0] = dataGuess % 256;
+		ptrParam->LastDataFrame[indexByte1] = (dataGuess >> 8) % 256;
+		ptrParam->LastDataFrame[indexByte2] = (dataGuess >> 16) % 256;
+		ptrParam->LastDataFrame[indexByte3] = (dataGuess >> 24) % 256;
         DoDirectCalculate();
 
         /// Verification in case this method gets stuck
@@ -530,16 +544,16 @@ uint32_t Calculator::CalculateReverseElementary(uint32_t value, const uint8_t op
             if ( opcode == OPCODE_EQU ) /// для "==" заполняем особенным образом
             {
                 if (IsItDataFrame(operand1))
-                    DataFrame[operand1] = unknownValue;
+					ptrParam->LastDataFrame[operand1] = unknownValue;
                 else if (IsItDataFrame(operand2))
-					DataFrame[operand2] = unknownValue;
+					ptrParam->LastDataFrame[operand2] = unknownValue;
             }
             else
             {
                 if (IsItDataFrame(operand1))
-					DataFrame[operand1] |= unknownValue;
+					ptrParam->LastDataFrame[operand1] |= unknownValue;
                 else if (IsItDataFrame(operand2))
-					DataFrame[operand2] |= unknownValue;
+					ptrParam->LastDataFrame[operand2] |= unknownValue;
             }
         }
 
@@ -552,11 +566,11 @@ uint32_t Calculator::CalculateReverseElementary(uint32_t value, const uint8_t op
             unknownValue = value;
 
             /// 2.2. Заполнение байт данных фрейма предполагаемыми значениями
-            if (opcode == OPCODE_LOG_OR)            DataFrame[byteFrameCount] = (value) ? 1 : 0;
-            else if (opcode == OPCODE_LOG_AND)      DataFrame[byteFrameCount] = (value) ? 1 : 0;
-            else if (opcode == OPCODE_BIT_OR)       DataFrame[byteFrameCount] = uint8_t(value);
+            if (opcode == OPCODE_LOG_OR)            ptrParam->LastDataFrame[byteFrameCount] = (value) ? 1 : 0;
+            else if (opcode == OPCODE_LOG_AND)      ptrParam->LastDataFrame[byteFrameCount] = (value) ? 1 : 0;
+            else if (opcode == OPCODE_BIT_OR)       ptrParam->LastDataFrame[byteFrameCount] = uint8_t(value);
             else if (opcode == OPCODE_BIT_XOR)      {/*TODO*/}
-            else if (opcode == OPCODE_BIT_AND)      DataFrame[byteFrameCount] = uint8_t(value);
+            else if (opcode == OPCODE_BIT_AND)      ptrParam->LastDataFrame[byteFrameCount] = uint8_t(value);
             else
                 return 0;
         }

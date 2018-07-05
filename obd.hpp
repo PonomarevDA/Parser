@@ -47,14 +47,15 @@ public:
     struct ParamTable_t
     {
         ParamTable_t(): FormulaLength(0), tree(32) {}
+		uint8_t LastDataFrame[8];
         uint8_t FormulaLength;
+		uint8_t DataBytes[4];
         uint8_t Formula[32];
         Tree tree;
-        uint8_t DataBytes[4];
     };
 	
 protected:
-	friend Calculator;	/// because we need access to private data of this class
+	friend Calculator;	/// because we need access to private data of this class from Calculator
 	/// Some constans
     enum
     {
@@ -84,22 +85,30 @@ protected:
 class Calculator
 {
 public:
-	Calculator(uint32_t value, uint8_t paramNum, OBD& obd);
-	uint32_t DoReverseCalculateWithTree(uint32_t value, const Tree::Node* node = nullptr);
-	uint8_t DoReverseCalculateWithMethodDichotomy(const int64_t NeedValue);
-	uint8_t DoReverseCalculateWithBruteForce(const int64_t NeedValue);
-	void DoDirectCalculate();
+	///< Статус результата расчета
+	enum : uint8_t
+	{
+		OK = 0,
+		FORMULA_ERROR_NODE_IS_OPERAND = 1,
+		BASE_IS_NULL = 2,
+		UNEXPECTED_ERROR = 255,
+	};
+	// Main methods for calculate
+	uint8_t DoReverseCalculateWithTree(const uint32_t value, const uint8_t paramNum, OBD& obd);
+	uint8_t DoReverseCalculateWithMethodDichotomy(const uint32_t value, const uint8_t paramNum, OBD& obd);
+	uint8_t DoReverseCalculateWithBruteForce(const uint32_t value, const uint8_t paramNum, OBD& obd);
+	uint32_t DoDirectCalculate();
 	void PutValue(uint32_t value);
 	uint8_t* GetDataFrame();
 	uint32_t GetValue();
 private:
 	/// Variables
 	uint32_t Value;
-	Stack stack;
-	uint8_t DataFrame[8];
-	OBD::ParamTable_t* ptrParamTable;
+	uint8_t Status;					//< Status of reverse calculate with tree
+	OBD::ParamTable_t* ptrParam;	//< Pointer for parameter from ParamTable (class OBD instance field)
 
-	/// Elementary methods for do direct/reverse calculation algorithm
+	/// Additional methods for do direct/reverse calculation algorithm
+	uint32_t CalculateReverseWithTree(uint32_t value, const Tree::Node* node = nullptr);
 	uint32_t CalculateDirectElementary(const uint8_t opcode, const uint32_t operand1, const uint32_t operand2 = 0, const uint32_t operand3 = 0);
 	uint32_t CalculateReverseElementary(uint32_t value, const uint8_t opcode, const uint32_t operand1, const uint32_t operand2 = 0, const uint32_t operand3 = 0);
 };

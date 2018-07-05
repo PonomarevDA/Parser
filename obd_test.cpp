@@ -257,45 +257,50 @@ void TestOBD::TestCalculationReverse(int64_t needValue, uint8_t paramCount)
     ShowFormula(paramCount);
     ShowTree(paramCount);
 	uint8_t* ptrDataFrame;
-    std::cout << "\nOutput configurator: " << needValue << "\n";
+	Calculator calc;
+	std::cout << "\n   Method     Need  Real   Frame";
 
-    std::cout << "\nReverse calculation (brut force):\n";
-    std::cout << "Frame: ";
-	Calculator calc(uint32_t(needValue), paramCount, *this);
-    if (calc.DoReverseCalculateWithBruteForce(needValue) == 0)
-    {
+
+	// 1. Tree
+	if (calc.DoReverseCalculateWithTree(needValue, paramCount, *this) == 0)
+	{
 		ptrDataFrame = calc.GetDataFrame();
-        for (uint8_t count = 0; count < 8; count++)
-            std::cout << ptrDataFrame[count] + 0 << " ";
-        calc.DoDirectCalculate();
-        std::cout << "\nOutput terminal: " << calc.GetValue() << "\n";
-    }
-    else
-        std::cout << "There is no match!\n";
-
-
-    std::cout << "\nReverse calculation (tree):\n";
-    std::cout << "Frame: ";
-	calc.PutValue(needValue);
-    calc.DoReverseCalculateWithTree(needValue);
-	ptrDataFrame = calc.GetDataFrame();
-    for (uint8_t count = 0; count < 8; count++)
-		std::cout << ptrDataFrame[count] + 0 << " ";
-	calc.DoDirectCalculate();
-    std::cout << "\nOutput terminal: " << calc.GetValue() << "\n";
-
-    std::cout << "\nReverse calculation (method dichotomy):\n";
-    std::cout << "Frame: ";
-    if (calc.DoReverseCalculateWithMethodDichotomy(needValue) == 0)
-    {
-		ptrDataFrame = calc.GetDataFrame();
+		calc.DoDirectCalculate();
+		std::cout << "\n1. Tree      : " << needValue << "    " << calc.GetValue() << "    ";
 		for (uint8_t count = 0; count < 8; count++)
 			std::cout << ptrDataFrame[count] + 0 << " ";
+	}
+	else
+		std::cout << "\n1. Tree      : Can't calculate!";
+	
+
+
+	// 2. Brut force
+    if (calc.DoReverseCalculateWithBruteForce(needValue, paramCount, *this) == 0)
+    {
+		ptrDataFrame = calc.GetDataFrame();
 		calc.DoDirectCalculate();
-		std::cout << "\nOutput terminal: " << calc.GetValue() << "\n";
+		std::cout << "\n2. Brut force: " << needValue << "    " << calc.GetValue() << "    ";
+		for (uint8_t count = 0; count < 8; count++)
+			std::cout << ptrDataFrame[count] + 0 << " ";
     }
     else
-        std::cout << "Out of time!\n";
+        std::cout << "\n2. Brut force: Can't calculate!";
+
+
+	// 3. Dichotomy
+    if (calc.DoReverseCalculateWithMethodDichotomy(needValue, paramCount, *this) == 0)
+    {
+		ptrDataFrame = calc.GetDataFrame();
+		calc.DoDirectCalculate();
+		std::cout << "\n3. Dichotomy : " << needValue << "    " << calc.GetValue() << "    ";
+		for (uint8_t count = 0; count < 8; count++)
+			std::cout << ptrDataFrame[count] + 0 << " ";
+    }
+    else
+        std::cout << "\n3. Dichotomy : Out of time!";
+
+
     std::cout << "\n\n\n\n";
 }
 
@@ -304,8 +309,8 @@ void TestOBD::TestCalculationReverse(int64_t needValue, uint8_t paramCount)
 */
 void TestOBD::ShowFormula(uint8_t paramCount)
 {
-    std::cout << "\nFormula[" << paramCount + 0 << "]: " << std::endl;
-    std::cout << "Length = " << ParamTable[paramCount].FormulaLength + 0 << std::endl;
+    std::cout << "\nFormula[" << paramCount + 0 << "]: ";
+    std::cout << "Length = " << ParamTable[paramCount].FormulaLength + 0 << "   ";
     for (uint8_t countOfByte = 1; countOfByte < ParamTable[paramCount].FormulaLength; countOfByte++)
     {
         uint8_t byte = ParamTable[paramCount].Formula[countOfByte];
@@ -352,7 +357,7 @@ void TestOBD::ShowByte(uint8_t byte)
 void TestOBD::ShowTree(uint8_t paramCount)
 {
     Tree::Node* ptrNode = ParamTable[paramCount].tree.GetBaseNode();
-    std::cout << std::endl << "Tree:" << std::endl;
+    std::cout << std::endl << "Tree: ";
     if (ptrNode != nullptr)
     {
         ShowTreeNode(ptrNode);
