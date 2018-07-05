@@ -265,8 +265,8 @@ void TestOBD::TestCalculationReverse(int64_t needValue, uint8_t paramCount)
 	if (calc.DoReverseCalculateWithTree(needValue, paramCount, *this) == 0)
 	{
 		ptrDataFrame = calc.GetDataFrame();
-		calc.DoDirectCalculate();
-		std::cout << "\n1. Tree      : " << needValue << "    " << calc.GetValue() << "    ";
+		uint32_t currentValue = calc.DoDirectCalculate();
+		std::cout << "\n1. Tree      : " << needValue << "    " << currentValue << "    ";
 		for (uint8_t count = 0; count < 8; count++)
 			std::cout << ptrDataFrame[count] + 0 << " ";
 	}
@@ -279,8 +279,8 @@ void TestOBD::TestCalculationReverse(int64_t needValue, uint8_t paramCount)
     if (calc.DoReverseCalculateWithBruteForce(needValue, paramCount, *this) == 0)
     {
 		ptrDataFrame = calc.GetDataFrame();
-		calc.DoDirectCalculate();
-		std::cout << "\n2. Brut force: " << needValue << "    " << calc.GetValue() << "    ";
+		uint32_t currentValue = calc.DoDirectCalculate();
+		std::cout << "\n2. Brut force: " << needValue << "    " << currentValue << "    ";
 		for (uint8_t count = 0; count < 8; count++)
 			std::cout << ptrDataFrame[count] + 0 << " ";
     }
@@ -292,8 +292,8 @@ void TestOBD::TestCalculationReverse(int64_t needValue, uint8_t paramCount)
     if (calc.DoReverseCalculateWithMethodDichotomy(needValue, paramCount, *this) == 0)
     {
 		ptrDataFrame = calc.GetDataFrame();
-		calc.DoDirectCalculate();
-		std::cout << "\n3. Dichotomy : " << needValue << "    " << calc.GetValue() << "    ";
+		uint32_t currentValue = calc.DoDirectCalculate();
+		std::cout << "\n3. Dichotomy : " << needValue << "    " << currentValue << "    ";
 		for (uint8_t count = 0; count < 8; count++)
 			std::cout << ptrDataFrame[count] + 0 << " ";
     }

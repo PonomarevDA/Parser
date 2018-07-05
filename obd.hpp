@@ -98,12 +98,9 @@ public:
 	uint8_t DoReverseCalculateWithMethodDichotomy(const uint32_t value, const uint8_t paramNum, OBD& obd);
 	uint8_t DoReverseCalculateWithBruteForce(const uint32_t value, const uint8_t paramNum, OBD& obd);
 	uint32_t DoDirectCalculate();
-	void PutValue(uint32_t value);
 	uint8_t* GetDataFrame();
-	uint32_t GetValue();
 private:
 	/// Variables
-	uint32_t Value;
 	uint8_t Status;					//< Status of reverse calculate with tree
 	OBD::ParamTable_t* ptrParam;	//< Pointer for parameter from ParamTable (class OBD instance field)
 

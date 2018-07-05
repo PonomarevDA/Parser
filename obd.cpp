@@ -85,26 +85,6 @@ uint8_t* Calculator::GetDataFrame()
 
 
 /*
-* @brief Получить данные фрейма
-* @return указатель на массив из 8-и байт данных фрейма
-*/
-uint32_t Calculator::GetValue()
-{
-	return Value;
-}
-
-
-/*
-* @brief Внести число из конфигуратора
-* @return указатель на массив из 8-и байт данных фрейма
-*/
-void Calculator::PutValue(uint32_t value)
-{
-	Value = value;
-}
-
-
-/*
 * @brief Выполнение прямого расчета по формуле
 * @note скопировано из терминала и немного изменен
 * @return value - результат расчета
@@ -168,7 +148,6 @@ uint32_t Calculator::DoDirectCalculate()
             }
         }
     }
-    Value = operands[0];
 	return operands[0];
 }
 
@@ -329,8 +308,8 @@ uint8_t Calculator::DoReverseCalculateWithBruteForce(const uint32_t value, const
                 while (valueByte0 < 256)
                 {
 					ptrParam->LastDataFrame[indexByte0] = (uint8_t)valueByte0;
-                    DoDirectCalculate();
-                    if (Value == value)
+                    uint32_t currentValue = DoDirectCalculate();
+                    if (currentValue == value)
                         return OK;
                     valueByte0++;
                 }
@@ -408,10 +387,10 @@ uint8_t Calculator::DoReverseCalculateWithMethodDichotomy(const uint32_t value, 
         return ERROR;
 
     /// Main algorithm
-    DoDirectCalculate();
-    while (Value != value)
+    uint32_t currentValue = DoDirectCalculate();
+    while (currentValue != value)
     {
-        int64_t dif = Value - value;
+        int64_t dif = currentValue - value;
         /// If the desired number on the left
         if (dif > 0)
         {
@@ -428,7 +407,7 @@ uint8_t Calculator::DoReverseCalculateWithMethodDichotomy(const uint32_t value, 
 		ptrParam->LastDataFrame[indexByte1] = (dataGuess >> 8) % 256;
 		ptrParam->LastDataFrame[indexByte2] = (dataGuess >> 16) % 256;
 		ptrParam->LastDataFrame[indexByte3] = (dataGuess >> 24) % 256;
-        DoDirectCalculate();
+		currentValue = DoDirectCalculate();
 
         /// Verification in case this method gets stuck
         if ((counter++) > 32)
