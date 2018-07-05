@@ -12,7 +12,7 @@ uint8_t IsItBinaryOperator(const uint8_t byte);
 uint8_t IsItTernaryOperator(const uint8_t byte);
 
 
-/*
+/**
 * @brief Построить деревья для синтаксического анализа
 */
 void OBD::CreateTrees()
@@ -74,7 +74,7 @@ void OBD::CreateTrees()
 }
 
 
-/*
+/**
 * @brief Получить данные фрейма
 * @return указатель на массив из 8-и байт данных фрейма
 */
@@ -84,7 +84,7 @@ uint8_t* Calculator::GetDataFrame()
 }
 
 
-/*
+/**
 * @brief Выполнение прямого расчета по формуле
 * @note скопировано из терминала и немного изменен
 * @return value - результат расчета
@@ -152,7 +152,7 @@ uint32_t Calculator::DoDirectCalculate()
 }
 
 
-/*
+/**
 * @brief Инициализация данных и попытка рекурсивного расчета
 * @param value - число, заданное в конфигураторе
 * @param paramNum - номер параметра из таблицы параметров
@@ -171,7 +171,7 @@ uint8_t Calculator::DoReverseCalculateWithTree(uint32_t value, uint8_t paramNum,
 	return Status;
 }
 
-/*
+/**
 * @brief Выполнить попытку рекурсивного обратного расчета с помощью дерева
 * @param value - число для для выполнения обратного расчета
 * @return value - число после выполнния обратного расчета (в общем случае должно совпадать с аргументом)
@@ -263,7 +263,7 @@ uint32_t Calculator::CalculateReverseWithTree(uint32_t value, const Tree::Node* 
 }
 
 
-/*
+/**
 * @brief Обратный расчет с помощью метода перебора
 * @note Может выполняться очень долго (до получаса при 4 байтах),
 * поэтому при 4-ех байтах сразу же возвращаем ошибку
@@ -274,59 +274,53 @@ uint32_t Calculator::CalculateReverseWithTree(uint32_t value, const Tree::Node* 
 */
 uint8_t Calculator::DoReverseCalculateWithBruteForce(const uint32_t value, const uint8_t paramNum, OBD& obd)
 {
-	// Init
+	// Declarations and initializations
 	ptrParam = &(obd.ParamTable[paramNum]);
-
-	// Main algorithm
-    enum : uint8_t
-    {
-        OK = 0,
-        ERROR = 1,
-    };
 	memset(ptrParam->LastDataFrame, 0x00, 8);		// заполняем массив нулями
-    uint8_t indexByte0 = ptrParam->DataBytes[0];
-    uint8_t indexByte1 = ptrParam->DataBytes[1];
-    uint8_t indexByte2 = ptrParam->DataBytes[2];
-    uint8_t indexByte3 = ptrParam->DataBytes[3];
 
-    if( IsItDataFrame(indexByte3) )
-        return ERROR;
+	uint8_t indexOfByte[4];
+	uint16_t valueOfByte[4];
+	for (uint8_t count = 0; count < 4; count++)
+	{
+		indexOfByte[count] = ptrParam->DataBytes[count];
+		valueOfByte[count] = IsItDataFrame(indexOfByte[count]) ? 0 : 255;
+	}
 
-    uint16_t valueByte0 = ( IsItDataFrame(indexByte0) ) ? 0 : 255;
-    uint16_t valueByte1 = ( IsItDataFrame(indexByte1) ) ? 0 : 255;
-    uint16_t valueByte2 = ( IsItDataFrame(indexByte2) ) ? 0 : 255;
-    uint16_t valueByte3 = ( IsItDataFrame(indexByte3) ) ? 0 : 255;
-    while (valueByte3 < 256)
+    if( IsItDataFrame(indexOfByte[3]) )
+        return UNEXPECTED_ERROR;
+	
+	// Main algorithm
+    while (valueOfByte[3] < 256)
     {
-		ptrParam->LastDataFrame[indexByte3] = (uint8_t)valueByte3;
-        while (valueByte2 < 256)
+		ptrParam->LastDataFrame[ indexOfByte[3] ] = (uint8_t)valueOfByte[3];
+        while (valueOfByte[2] < 256)
         {
-			ptrParam->LastDataFrame[indexByte2] = (uint8_t)valueByte2;
-            while (valueByte1 < 256)
+			ptrParam->LastDataFrame[ indexOfByte[2] ] = (uint8_t)valueOfByte[2];
+            while (valueOfByte[1] < 256)
             {
-				ptrParam->LastDataFrame[indexByte1] = (uint8_t)valueByte1;
-                while (valueByte0 < 256)
+				ptrParam->LastDataFrame[indexOfByte[1]] = (uint8_t)valueOfByte[1];
+                while (valueOfByte[0] < 256)
                 {
-					ptrParam->LastDataFrame[indexByte0] = (uint8_t)valueByte0;
+					ptrParam->LastDataFrame[ indexOfByte[0] ] = (uint8_t)valueOfByte[0];
                     uint32_t currentValue = DoDirectCalculate();
                     if (currentValue == value)
                         return OK;
-                    valueByte0++;
+					valueOfByte[0]++;
                 }
-                valueByte0 = 0;
-                valueByte1++;
+				valueOfByte[0] = 0;
+				valueOfByte[1]++;
             }
-            valueByte1 = 0;
-            valueByte2++;
+			valueOfByte[1] = 0;
+			valueOfByte[2]++;
         }
-        valueByte2 = 0;
-        valueByte3++;
+		valueOfByte[2] = 0;
+		valueOfByte[3]++;
     }
-    return ERROR;
+    return UNEXPECTED_ERROR;
 }
 
 
-/*
+/**
 * @brief Обратный расчет с помощью метода дихотомии
 * @note Может не сойтись и зависнуть, однако относительно быстрый,
 * поэтому добавлен счетчик, по переполнению которого возвращаем ошибку
@@ -420,7 +414,7 @@ uint8_t Calculator::DoReverseCalculateWithMethodDichotomy(const uint32_t value, 
 }
 
 
-/*
+/**
 * @brief Расчет выражения
 * @note Скопировано из тестового стенда
 * @param opcode - оператор
@@ -465,7 +459,7 @@ uint32_t Calculator::CalculateDirectElementary(const uint8_t opcode, const uint3
 }
 
 
-/*
+/**
 * @brief Определение байтов фрейма по формуле и по конечному значению
 * @param value - значение, полученное после подстановки переменных формулы
 * @param opcode - оператор
@@ -571,7 +565,7 @@ uint32_t Calculator::CalculateReverseElementary(uint32_t value, const uint8_t op
 }
 
 
-/*
+/**
 * @brief Определяет, является ли данный байт байтом данных фрейма
 * @param byte - байт для рассмотрения
 * @return 1 - является, 0 - нет
@@ -582,7 +576,7 @@ uint8_t IsItDataFrame(const uint8_t byte)
 }
 
 
-/*
+/**
 * @brief Определяет, является ли данный байт константой
 * @param byte - байт для рассмотрения
 * @return 1 - является, 0 - нет
@@ -593,7 +587,7 @@ uint8_t IsItConst(const uint8_t byte)
 }
 
 
-/*
+/**
 * @brief Определяет, является ли данный байт оператором
 * @param byte - байт для рассмотрения
 * @return 1 - является, 0 - нет
@@ -604,7 +598,7 @@ uint8_t IsItOperator(const uint8_t byte)
 }
 
 
-/*
+/**
 * @brief Определяет, является ли данный байт операндом
 * @param byte - байт для рассмотрения
 * @return 1 - является, 0 - нет
@@ -615,7 +609,7 @@ uint8_t IsItOperand(const uint8_t byte)
 }
 
 
-/*
+/**
 * @brief Определяет, является ли данный байт унарным оператором
 * @param byte - байт для рассмотрения
 * @return 1 - является, 0 - нет
@@ -626,7 +620,7 @@ uint8_t IsItUnaryOperator(const uint8_t byte)
 }
 
 
-/*
+/**
 * @brief Определяет, является ли данный байт бинарным оператором
 * @param byte - байт для рассмотрения
 * @return 1 - является, 0 - нет
@@ -637,7 +631,7 @@ uint8_t IsItBinaryOperator(const uint8_t byte)
 }
 
 
-/*
+/**
 * @brief Определяет, является ли данный байт тернарным оператором
 * @param byte - байт для рассмотрения
 * @return 1 - является, 0 - нет

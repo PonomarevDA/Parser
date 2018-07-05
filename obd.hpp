@@ -37,7 +37,7 @@ enum Opcode_t
 	OPCODE_IF_ELSE = 0x1C,		///< ? IF-ELSE
 };
 
-/*
+/**
 * @brief Протокол OBD
 */
 class OBD
@@ -59,12 +59,12 @@ protected:
 	/// Some constans
     enum
     {
-        MAX_NUMBER_OF_DATA_BYTES = 4,
+        MAX_NUMBER_OF_DATA_BYTES = 4,	// number of max data bytes in formula in CanBase 
     };
     /// Method init:
     void CreateTrees();
 
-	/// Methods for check the byte type
+	/// Methods for check the byte type (friend because we need access to those methods from Calculator)
 	friend uint8_t IsItDataFrame(const uint8_t byte);
 	friend uint8_t IsItConst(const uint8_t byte);
 	friend uint8_t IsItOperator(const uint8_t byte);
@@ -74,18 +74,18 @@ protected:
 	friend uint8_t IsItTernaryOperator(const uint8_t byte);
 
     /// Variables:
-    ParamTable_t ParamTable[9];
-    uint8_t ParamNumber;
+    ParamTable_t ParamTable[9];		///< Table of params from CanBase
+    uint8_t ParamNumber;			///< Number of params from ParamTable
 };
 
 
-/*
+/**
 * @brief Калькулятор, решающий прямую и обратную задачи
 */
 class Calculator
 {
 public:
-	///< Статус результата расчета
+	///< Status of calculation result
 	enum : uint8_t
 	{
 		OK = 0,
