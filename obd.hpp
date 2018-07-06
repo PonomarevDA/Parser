@@ -1,3 +1,8 @@
+/**
+* @file obd.hpp
+* @brief Заголовочный файл протокола OBD
+*/
+
 #ifndef __OBD
 #define __OBD
 
@@ -46,7 +51,7 @@ public:
     /// Table of parameters, that storing information about sensors from CanBase
     struct ParamTable_t
     {
-        ParamTable_t(): FormulaLength(0), tree(32) {}
+        ParamTable_t(): FormulaLength(0) {}
 		uint8_t LastDataFrame[8];
         uint8_t FormulaLength;
 		uint8_t DataBytes[4];
@@ -98,7 +103,7 @@ public:
 	uint8_t DoReverseCalculateWithMethodDichotomy(const uint32_t value, const uint8_t paramNum, OBD& obd);
 	uint8_t DoReverseCalculateWithBruteForce(const uint32_t value, const uint8_t paramNum, OBD& obd);
 	uint32_t DoDirectCalculate();
-	uint8_t* GetDataFrame();
+	uint8_t* GetDataFrame() const;
 private:
 	/// Variables
 	uint8_t Status;					//< Status of reverse calculate with tree

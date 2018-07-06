@@ -3,6 +3,9 @@
 
 #include "obd.hpp"
 
+/**
+* @brief “естирование методов обратного расчета
+*/
 class TestOBD: public OBD
 {
 private:

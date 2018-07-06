@@ -1,3 +1,8 @@
+/**
+* @file data_structures.hpp
+* @brief Заголовочный файл с структурами данных
+*/
+
 #ifndef __DATASTRUCTURES
 #define __DATASTRUCTURES
 
@@ -5,14 +10,14 @@ typedef unsigned char uint8_t;
 typedef signed char int8_t;
 typedef unsigned int uint32_t;
 
-/*
-* @brief Дерево постоянного указанного заранее размера
+/**
+* @brief Дерево постоянного указанного заранее размера - 32 узла
 */
 class Tree
 {
 public:
-    /*
-    * @brief Узел дерева: хранит байт данных, кол-во потомков, указатель указателей на них и указатель на родителя
+    /**
+    * @brief Узел дерева
     */
     struct Node
     {
@@ -22,36 +27,44 @@ public:
         Node* ChildsArr[3];
         Node* Parent;
     };
+	// Some constans
+	enum
+	{
+		TREE_SIZE = 32,
+	};
 
-    Tree() : Size(0), MaxSize(10) {}						// конструктор без аргументов - размер 32
-    Tree(uint8_t maxSize) : Size(0), MaxSize(maxSize) {}	/*TODO: конструктор с аргументом, но размер все равно 32*/
-
-    Node* AddNodeLower(uint8_t);							// добавить операнд (узел не имеет потомков)
+    Tree() : Size(0), MaxSize(TREE_SIZE) {}					// конструктор без аргументов
+    Node* AddNodeLower(const uint8_t value);				// добавить операнд (узел не имеющий потомков)
     Node* AddNodeParent(uint8_t, Node**, int8_t);           // добавить оператор (аргументы: байт вместе с потомками)
-    Node* GetBaseNode();									// получить указатель на самый верхний узел
-
-    uint8_t GetSize();
-    uint8_t GetMaxSize();
+    
+	Node* GetBaseNode();									// получить указатель на самый верхний узел
+    uint8_t GetSize() const;								// получить текущий размер дерева
+    uint8_t GetMaxSize() const;								// получить максимальный размер дерева
 private:
     uint8_t Size;
     const uint8_t MaxSize;
-    Node ArrOfNodes[32];
+    Node ArrOfNodes[TREE_SIZE];
 };
 
 
-/*
-* @brief Стек заранее заданного размера - 32 байта
+/**
+* @brief Стек заранее заданного размера - 32 узла
 */
 class Stack
 {
 public:
-    Stack() : Size(0), MaxSize(32) {}
-    void Push(Tree::Node*);
+	// Some constans
+	enum
+	{
+		STACK_SIZE = 32,
+	};
+    Stack() : Size(0), MaxSize(STACK_SIZE) {}
+    void Push(Tree::Node* const  ptrNode);
     Tree::Node* Pop();
 private:
     uint8_t Size;
     const uint8_t MaxSize;
-    Tree::Node* Arr[32];
+    Tree::Node* Arr[STACK_SIZE];
 
 };
 

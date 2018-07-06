@@ -1,4 +1,4 @@
-/*
+/**
 * @File Файл с реализацией методов класса Tree
 * @note Данное дерево предназначено для проведения разбора формул и выполнения
 * обратного вычисления.
@@ -8,12 +8,12 @@
 #include <cstring>
 
 
-/*
-* @brief Добавить узел нижнего уровня, т.е. у которого никогда не будет детей
+/**
+* @brief Добавить узел нижнего уровня, т.е. у которого никогда не будет потомков
 * @param value - значение узла
-* @note Если памяти не хватает - игнорируем
+* @return указатель на добавленный узел, если памяти хватает, иначе nullptr
 */
-Tree::Node* Tree::AddNodeLower(uint8_t value)
+Tree::Node* Tree::AddNodeLower(const uint8_t value)
 {
     if (Size < MaxSize)
     {
@@ -24,11 +24,12 @@ Tree::Node* Tree::AddNodeLower(uint8_t value)
 }
 
 
-/*
+/**
 * @brief Добавить узел "родитель", т.е. у которого есть дети
 * @param value - значение узла
-* @param value - значение узла
-* @return указатель на узел, иначе nullptr
+* @param childsArr - указатель указателей на потомков
+* @param childsNum - количество потомков
+* @return указатель на добавленный узел, если памяти хватает, иначе nullptr
 */
 Tree::Node* Tree::AddNodeParent(uint8_t value, Node** childsArr, int8_t childsNum)
 {
@@ -47,36 +48,37 @@ Tree::Node* Tree::AddNodeParent(uint8_t value, Node** childsArr, int8_t childsNu
 }
 
 
-/*
+/**
+* @brief Получить указатель на самый верхний узел (родитель всех узлов)
+* @return указатель на самый верхний узел, если он существует, иначе nullptr
+*/
+Tree::Node* Tree::GetBaseNode()
+{
+	Tree::Node* node = &ArrOfNodes[0];
+	if (node == nullptr)
+		return node;
+	while (node->Parent != nullptr)
+		node = node->Parent;
+	return node;
+}
+
+
+/**
 * @brief Получить текущий размер дерева (текущее кол-во узлов)
 * @return текущий размер дерева
 */
-uint8_t Tree::GetSize()
+uint8_t Tree::GetSize() const
 {
     return Size;
 }
 
 
-/*
+/**
 * @brief Получить максимальный размер дерева (максимальное кол-во узлов)
 * @return максимальный размер дерева
 */
-uint8_t Tree::GetMaxSize()
+uint8_t Tree::GetMaxSize() const
 {
     return MaxSize;
 }
 
-
-/*
-* @brief Получить указатель на самый верхний узел (родитель всех узлов)
-* @return указатель на самый верхний узел
-*/
-Tree::Node* Tree::GetBaseNode()
-{
-    Tree::Node* node = &ArrOfNodes[0];
-    if (node == nullptr)
-        return node;
-    while(node->Parent != nullptr)
-        node = node->Parent;
-    return node;
-}

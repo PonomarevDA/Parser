@@ -1,3 +1,8 @@
+/**
+* @file obd.hpp
+* @brief Реализация протокола OBD
+*/
+
 #include "obd.hpp"
 #include "cstring"  // for memcpy
 #include <iostream> // types
@@ -78,7 +83,7 @@ void OBD::CreateTrees()
 * @brief Получить данные фрейма
 * @return указатель на массив из 8-и байт данных фрейма
 */
-uint8_t* Calculator::GetDataFrame()
+uint8_t* Calculator::GetDataFrame() const
 {
 	return ptrParam->LastDataFrame;
 }
@@ -329,13 +334,7 @@ uint8_t Calculator::DoReverseCalculateWithBruteForce(const uint32_t value, const
 */
 uint8_t Calculator::DoReverseCalculateWithMethodDichotomy(const uint32_t value, const uint8_t paramNum, OBD& obd)
 {
-    enum : uint8_t
-    {
-        OK = 0,
-        ERROR = 1,
-    };
-
-    /// Init variables
+    /// Declarations and initializations
 	ptrParam = &(obd.ParamTable[paramNum]);
 
 	memset(ptrParam->LastDataFrame, 0x00, 8);	/// заполняем массив нулями
@@ -349,8 +348,8 @@ uint8_t Calculator::DoReverseCalculateWithMethodDichotomy(const uint32_t value, 
     uint8_t indexByte3 = ptrParam->DataBytes[3];
     if (IsItDataFrame(indexByte3))
     {
-        dataMaxBorder = 4294967295;	/// 2^32 - 1
-        dataGuess = 2147483648;		/// 2^31
+        dataMaxBorder = 4294967295UL;	/// 2^32 - 1
+        dataGuess = 2147483648UL;		/// 2^31
 		ptrParam->LastDataFrame[indexByte3] = (dataGuess >> 24) % 256;
 		ptrParam->LastDataFrame[indexByte2] = (dataGuess >> 16) % 256;
 		ptrParam->LastDataFrame[indexByte1] = (dataGuess >> 8) % 256;
@@ -378,7 +377,7 @@ uint8_t Calculator::DoReverseCalculateWithMethodDichotomy(const uint32_t value, 
 		ptrParam->LastDataFrame[indexByte0] = dataGuess;
     }
     else
-        return ERROR;
+        return UNEXPECTED_ERROR;
 
     /// Main algorithm
     uint32_t currentValue = DoDirectCalculate();
@@ -404,11 +403,10 @@ uint8_t Calculator::DoReverseCalculateWithMethodDichotomy(const uint32_t value, 
 		currentValue = DoDirectCalculate();
 
         /// Verification in case this method gets stuck
-        if ((counter++) > 32)
+        if ((counter++) > 32)	// value of counter means that method gets stuck
         {
-            return ERROR;
+            return UNEXPECTED_ERROR;
         }
-
     }
     return OK;
 }
@@ -542,7 +540,7 @@ uint32_t Calculator::CalculateReverseElementary(uint32_t value, const uint8_t op
             if (opcode == OPCODE_LOG_OR)            ptrParam->LastDataFrame[byteFrameCount] = (value) ? 1 : 0;
             else if (opcode == OPCODE_LOG_AND)      ptrParam->LastDataFrame[byteFrameCount] = (value) ? 1 : 0;
             else if (opcode == OPCODE_BIT_OR)       ptrParam->LastDataFrame[byteFrameCount] = uint8_t(value);
-            else if (opcode == OPCODE_BIT_XOR)      {/*TODO*/}
+            else if (opcode == OPCODE_BIT_XOR)      {/*in practice does not occur*/}
             else if (opcode == OPCODE_BIT_AND)      ptrParam->LastDataFrame[byteFrameCount] = uint8_t(value);
             else
                 return 0;
